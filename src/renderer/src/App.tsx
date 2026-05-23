@@ -421,6 +421,10 @@ function ProjectPage(props: {
     setDraft({ ...draft, styleTemplates: [template, ...draft.styleTemplates] });
   }
 
+  function applyTemplate(template: StyleTemplate): void {
+    setDraft({ ...draft, styleDescription: template.description });
+  }
+
   return (
     <section className="panel wide">
       <PanelTitle icon={Gauge} title="项目配置" subtitle="这些配置会写回 project.json 并参与后续 prompt 与导出" />
@@ -452,8 +456,44 @@ function ProjectPage(props: {
 
       <div className="panelTitle" style={{ border: "none", padding: "12px 0 0", marginTop: 4 }}>
         <div className="panelIcon"><Brush size={18} /></div>
-        <div><h2>风格模板</h2><p>预置风格组合，方便复用到不同素材</p></div>
+        <div><h2>风格模板</h2><p>点击模板卡片即可注入上方项目风格 prompt</p></div>
       </div>
+
+      <div className="templateGrid">
+        {draft.styleTemplates.length === 0 && <EmptyState text="还没有风格模板" />}
+        {draft.styleTemplates.map((template) => (
+          <article
+            key={template.id}
+            className="templateItem templateItemAction"
+            role="button"
+            tabIndex={0}
+            title="点击注入到项目风格 prompt"
+            onClick={() => applyTemplate(template)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                applyTemplate(template);
+              }
+            }}
+          >
+            <button
+              className="templateDelete"
+              title="删除模板"
+              onClick={(event) => {
+                event.stopPropagation();
+                setDraft({ ...draft, styleTemplates: draft.styleTemplates.filter((item) => item.id !== template.id) });
+              }}
+            >
+              <Trash2 size={13} />
+            </button>
+            <strong>{template.name}</strong>
+            <span>{template.description}</span>
+            <small>{template.lineWeight ?? "line"} · {template.lighting ?? "light"} · {template.cameraView ?? "view"}</small>
+            <small className="templateHint">点击注入 prompt</small>
+          </article>
+        ))}
+      </div>
+
       <div className="formGrid">
         <TextInput label="模板名称" value={newTemplate.name} onChange={(name) => setNewTemplate({ ...newTemplate, name })} />
         <TextInput label="描述" value={newTemplate.description} onChange={(description) => setNewTemplate({ ...newTemplate, description })} />
@@ -461,21 +501,6 @@ function ProjectPage(props: {
           <Plus size={16} />
           添加模板
         </button>
-      </div>
-      <div className="templateGrid">
-        {draft.styleTemplates.length === 0 && <EmptyState text="还没有风格模板" />}
-        {draft.styleTemplates.map((template) => (
-          <article key={template.id} className="templateItem" style={{ position: "relative", cursor: "pointer" }} onClick={() => setDraft({ ...draft, styleDescription: template.description })}>
-            <button
-              className="ghostButton"
-              style={{ position: "absolute", top: 6, right: 6, width: 28, minHeight: 28, padding: 0, borderColor: "transparent", color: "var(--magenta)", cursor: "pointer" }}
-              onClick={(e) => { e.stopPropagation(); setDraft({ ...draft, styleTemplates: draft.styleTemplates.filter((t) => t.id !== template.id) }); }}
-            ><Trash2 size={13} /></button>
-            <strong>{template.name}</strong>
-            <span>{template.description}</span>
-            <small>{template.lineWeight ?? "line"} · {template.lighting ?? "light"} · {template.cameraView ?? "view"}</small>
-          </article>
-        ))}
       </div>
 
       <button

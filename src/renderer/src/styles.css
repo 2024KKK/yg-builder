@@ -3,9 +3,6 @@
    Industrial pixel aesthetic for game asset pipeline
    =================================================================== */
 
-/* --- Fonts --- */
-@import url('https://fonts.googleapis.com/css2?family=Tektur:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* --- Design Tokens --- */
 :root {
   color-scheme: dark;
@@ -41,7 +38,7 @@ body {
   min-width: 1080px;
   min-height: 720px;
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Cascadia Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 13px;
   line-height: 1.5;
   color: var(--text);
@@ -143,7 +140,7 @@ button { color: inherit; }
 
 .brand strong {
   display: block;
-  font-family: 'Tektur', 'Bahnschrift', system-ui, sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", system-ui, sans-serif;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -173,7 +170,7 @@ button { color: inherit; }
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 13px;
   font-weight: 500;
   transition: all 180ms ease;
@@ -218,7 +215,7 @@ button { color: inherit; }
   top: -9px;
   left: 10px;
   padding: 0 6px;
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -278,7 +275,7 @@ button { color: inherit; }
 
 .topbar p {
   margin: 0 0 4px;
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -288,7 +285,7 @@ button { color: inherit; }
 
 .topbar h1 {
   margin: 0;
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -407,7 +404,7 @@ button { color: inherit; }
 
 .panelTitle h2 {
   margin: 0;
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -440,7 +437,7 @@ button { color: inherit; }
 .field.full { grid-column: 1 / -1; }
 
 .field > span {
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -460,7 +457,7 @@ button { color: inherit; }
   color: var(--text);
   outline: none;
   transition: all 180ms ease;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 13px;
 }
 
@@ -504,7 +501,7 @@ button { color: inherit; }
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--forge);
   color: var(--text);
   cursor: pointer;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 13px;
   font-weight: 500;
   transition: all 180ms ease;
@@ -545,7 +542,7 @@ button { color: inherit; }
   border-color: var(--cyan);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent), var(--cyan-dim);
   color: #fff;
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -571,7 +568,7 @@ button { color: inherit; }
   color: var(--muted);
   text-shadow: none;
   box-shadow: none;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   text-transform: none;
   letter-spacing: 0;
 }
@@ -597,7 +594,7 @@ button { color: inherit; }
 }
 
 .toggle span {
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 12px;
   color: var(--muted);
 }
@@ -655,7 +652,7 @@ button { color: inherit; }
 }
 
 .targetPicker > span {
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -684,7 +681,7 @@ button { color: inherit; }
   border-radius: 8px;
   background: linear-gradient(90deg, rgba(0, 212, 255, 0.03), transparent), var(--pit);
   color: var(--muted);
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -828,7 +825,7 @@ button { color: inherit; }
   border-radius: 999px;
   color: var(--amber);
   background: var(--amber-dim);
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -841,9 +838,22 @@ button { color: inherit; }
 }
 
 .templateItem {
+  position: relative;
   display: grid;
   gap: 6px;
-  padding: 14px;
+  padding: 14px 44px 14px 14px;
+}
+
+.templateItemAction {
+  cursor: pointer;
+}
+
+.templateItemAction:hover,
+.templateItemAction:focus-visible {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--cyan-glow);
+  outline: none;
 }
 
 .templateItem strong {
@@ -854,6 +864,44 @@ button { color: inherit; }
 
 .templateItem span { font-size: 12px; color: var(--muted); }
 .templateItem small { font-size: 12px; color: var(--dim); }
+
+.templateHint {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 212, 255, 0.32);
+  border-radius: 999px;
+  color: var(--cyan) !important;
+  background: var(--cyan-dim);
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
+  font-size: 10px !important;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.templateDelete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 45, 149, 0.08);
+  color: var(--magenta);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.templateDelete:hover,
+.templateDelete:focus-visible {
+  border-color: rgba(255, 45, 149, 0.45);
+  background: rgba(255, 45, 149, 0.14);
+  transform: translateY(-1px);
+  outline: none;
+}
 
 .historyItem {
   display: grid;
@@ -884,7 +932,7 @@ button { color: inherit; }
 
 .historyItem code {
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
@@ -899,7 +947,7 @@ button { color: inherit; }
 }
 
 .animationEditor > label {
-  font-family: 'Tektur', 'Bahnschrift', sans-serif;
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -921,7 +969,7 @@ button { color: inherit; }
   border-radius: 6px;
   background: var(--pit);
   color: var(--text);
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 13px;
   outline: none;
   transition: border-color 180ms ease;
