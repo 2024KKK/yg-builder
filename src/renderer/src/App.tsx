@@ -564,24 +564,24 @@ function GeneratePage(props: {
           ))}
         </div>
 
+        {props.project.styleTemplates.length > 0 && (
+          <div className="subPanel" style={{ padding: 10, gap: 6 }}>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>💡 点击风格模板快速填充 —</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {props.project.styleTemplates.map((t) => (
+                <button key={t.id} type="button" title="点击填入风格描述"
+                  style={{ fontSize: 11, minHeight: 28, padding: "0 12px", border: "1px solid", borderColor: style === t.description ? "var(--cyan)" : "var(--steel)", borderRadius: 6, background: style === t.description ? "var(--cyan-dim)" : "transparent", color: style === t.description ? "var(--cyan)" : "var(--text)", cursor: "pointer", fontFamily: "inherit", fontWeight: 500, transition: "all 140ms ease" }}
+                  onClick={() => setStyle(t.description)}
+                >{t.name}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="formGrid">
           <TextInput label="素材名称" value={name} onChange={setName} />
           <TextInput label="尺寸" value={size} onChange={setSize} />
           <NumberInput label="数量" value={count} min={1} max={64} onChange={setCount} />
-          <div className="field">
-            <span>风格</span>
-            <input type="text" value={style} onChange={(e) => setStyle(e.target.value)} />
-            {props.project.styleTemplates.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                {props.project.styleTemplates.map((t) => (
-                  <button key={t.id} type="button"
-                    style={{ fontSize: 10, minHeight: 22, padding: "0 8px", border: "1px solid", borderColor: style === t.description ? "var(--cyan)" : "var(--steel)", borderRadius: 4, background: style === t.description ? "var(--cyan-dim)" : "transparent", color: style === t.description ? "var(--cyan)" : "var(--muted)", cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }}
-                    onClick={() => setStyle(t.description)}
-                  >{t.name}</button>
-                ))}
-              </div>
-            )}
-          </div>
+          <TextInput label="风格" value={style} onChange={setStyle} />
         </div>
         <TextArea label="描述" value={description} onChange={setDescription} />
         <Toggle label="透明背景" value={transparentBackground} onChange={setTransparentBackground} />
