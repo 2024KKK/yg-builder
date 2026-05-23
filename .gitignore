@@ -1,0 +1,10 @@
+node_modules/
+out/
+dist/
+*.log
+vite-renderer.out.log
+vite-renderer.err.log
+*.zip
+*.asar
+.DS_Store
+Thumbs.db

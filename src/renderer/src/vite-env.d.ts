@@ -1,0 +1,36 @@
+/// <reference types="vite/client" />
+
+import type {
+  AppSettings,
+  CreateProjectInput,
+  ExportProjectInput,
+  ExportProjectResult,
+  GenerateAssetInput,
+  GeneratedAssetResult,
+  GenerationHistoryRecord,
+  IpcResponse,
+  Project,
+  RecentProject
+} from "@shared/types";
+
+declare global {
+  interface Window {
+    aiSpriteStudio: {
+      createProject(input: CreateProjectInput): Promise<IpcResponse<Project>>;
+      chooseProjectRoot(): Promise<IpcResponse<string>>;
+      openProjectDialog(): Promise<IpcResponse<Project>>;
+      openProjectPath(projectPath: string): Promise<IpcResponse<Project>>;
+      saveProject(project: Project): Promise<IpcResponse<Project>>;
+      getRecentProjects(): Promise<IpcResponse<RecentProject[]>>;
+      removeRecentProject(projectPath: string): Promise<IpcResponse<RecentProject[]>>;
+      getSettings(): Promise<IpcResponse<AppSettings>>;
+      saveSettings(settings: AppSettings): Promise<IpcResponse<AppSettings>>;
+      generateAssets(input: GenerateAssetInput): Promise<IpcResponse<GeneratedAssetResult>>;
+      exportProject(input: ExportProjectInput): Promise<IpcResponse<ExportProjectResult>>;
+      getHistory(projectPath: string): Promise<IpcResponse<GenerationHistoryRecord[]>>;
+      readImageDataUrl(projectPath: string, filePath: string): Promise<IpcResponse<string>>;
+      showItemInFolder(filePath: string): Promise<IpcResponse<boolean>>;
+      openPath(filePath: string): Promise<IpcResponse<boolean>>;
+    };
+  }
+}
