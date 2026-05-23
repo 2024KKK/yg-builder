@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Electron-33.x-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron"/>
   <img src="https://img.shields.io/badge/React-18.x-58c4dc?style=flat-square&logo=react&logoColor=white" alt="React"/>
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/Vite-6.x-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
+  <img src="https://img.shields.io/badge/Vite-5.x-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
   <img src="https://img.shields.io/badge/license-MIT-8a9aa8?style=flat-square" alt="MIT License"/>
 </p>
 
@@ -114,7 +114,7 @@ history/
 |------|------|
 | 桌面壳 | Electron 33 |
 | 前端 | React 18、TypeScript、Lucide React |
-| 构建 | Vite 6、electron-vite |
+| 构建 | Vite 5、electron-vite |
 | 图像处理 | Sharp |
 | 打包导出 | JSZip |
 | 本地存储 | JSON 文件、项目目录、Electron userData |
@@ -220,7 +220,7 @@ history/
 |-------|-----------|
 | Desktop Shell | Electron 33 |
 | Frontend | React 18, TypeScript, Lucide React |
-| Build | Vite 6, electron-vite |
+| Build | Vite 5, electron-vite |
 | Image Processing | Sharp |
 | Archive | JSZip |
 | Storage | JSON files, project directory, Electron userData |
