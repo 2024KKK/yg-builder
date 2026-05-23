@@ -101,7 +101,7 @@ export class GenerationService {
         files.push(toRelative(project.path, processedPath));
         absoluteFiles.push(processedPath);
       } catch (error) {
-        logs.push(`生成失败 ${itemName}: ${error instanceof Error ? error.message : String(error)}`);
+        logs.push(`生成失败 ${itemName}: ${this.formatError(error)}`);
       }
     }
 
@@ -211,9 +211,9 @@ export class GenerationService {
             frameIndex
           });
           logs.push(`生成角色帧: ${processedPath}`);
-        } catch (error) {
-          logs.push(`角色帧失败 ${animation.name}#${frameIndex}: ${error instanceof Error ? error.message : String(error)}`);
-        }
+      } catch (error) {
+          logs.push(`角色帧失败 ${animation.name}#${frameIndex}: ${this.formatError(error)}`);
+      }
       }
     }
 
@@ -330,7 +330,7 @@ export class GenerationService {
         files.push(toRelative(project.path, processedPath));
         logs.push(`生成 Tile: ${processedPath}`);
       } catch (error) {
-        logs.push(`Tile 失败 ${tileType}: ${error instanceof Error ? error.message : String(error)}`);
+        logs.push(`Tile 失败 ${tileType}: ${this.formatError(error)}`);
       }
     }
 
@@ -414,7 +414,7 @@ export class GenerationService {
         absoluteFiles.push(processedPath);
         logs.push(`生成素材: ${processedPath}`);
       } catch (error) {
-        logs.push(`素材失败 #${index}: ${error instanceof Error ? error.message : String(error)}`);
+        logs.push(`素材失败 #${index}: ${this.formatError(error)}`);
       }
     }
 
@@ -492,6 +492,12 @@ export class GenerationService {
     }
 
     return Array.from({ length: Math.max(input.count, 1) }, (_, index) => `${input.name || "icon"} ${index + 1}`);
+  }
+
+  private formatError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const normalized = message.replace(/\s+/g, " ").trim();
+    return normalized.length > 320 ? `${normalized.slice(0, 320)}...` : normalized;
   }
 
   private createAsset(

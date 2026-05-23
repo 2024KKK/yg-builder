@@ -53,7 +53,7 @@ export class AIGenerationService {
       throw new Error("OpenAI API Key 为空。请在设置页配置 API Key，或切换到本地草稿模式。");
     }
 
-    const endpoint = args.settings.apiBaseUrl || "https://api.openai.com/v1/images/generations";
+    const endpoint = this.resolveOpenAIImageEndpoint(args.settings.apiBaseUrl);
     this.assertHttpEndpoint(endpoint, "OpenAI API Base URL");
     const response = await fetch(endpoint, {
       method: "POST",
@@ -157,6 +157,29 @@ export class AIGenerationService {
     }
 
     throw new Error("自定义 API 响应不含 image / b64_json / url。");
+  }
+
+  private resolveOpenAIImageEndpoint(input: string): string {
+    const fallback = "https://api.openai.com/v1/images/generations";
+    const raw = input.trim() || fallback;
+    const url = new URL(raw);
+    const path = url.pathname.replace(/\/+$/g, "");
+
+    if (path === "" || path === "/") {
+      url.pathname = "/v1/images/generations";
+      return url.toString();
+    }
+
+    if (path === "/v1") {
+      url.pathname = `${path}/images/generations`;
+      return url.toString();
+    }
+
+    if (path.endsWith("/images/generations")) {
+      return url.toString();
+    }
+
+    return url.toString();
   }
 
   private assertHttpEndpoint(endpoint: string, label: string): void {
