@@ -499,6 +499,11 @@ function GeneratePage(props: {
       setDescription("medieval RPG inventory items, readable silhouettes");
       setSize(props.project.defaultResolution);
       setTransparentBackground(true);
+    } else if (assetType === "enemy") {
+      setName("slime");
+      setDescription("small dungeon slime enemy, readable silhouette");
+      setSize(props.project.defaultResolution);
+      setTransparentBackground(true);
     }
   }, [assetType, props.project.defaultResolution]);
 
@@ -527,6 +532,11 @@ function GeneratePage(props: {
     <div className="pageGrid generation">
       <section className="panel">
         <PanelTitle icon={Wand2} title="素材生成" subtitle={`当前 API: ${props.settings.aiProvider} · 模型: ${props.settings.model}`} />
+        {props.settings.aiProvider === "local-draft" && (
+          <div className="inlineWarning">
+            当前是 local-draft 本地草稿模式，不会调用外部 AI API。要调用中转站，请到设置页切换 Provider。
+          </div>
+        )}
         <div className="typeRail">
           {assetTypes.map((type) => (
             <button key={type.value} className={assetType === type.value ? "selected" : ""} onClick={() => setAssetType(type.value)}>
