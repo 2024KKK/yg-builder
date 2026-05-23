@@ -267,6 +267,15 @@ button {
   color: #ffd8d3;
 }
 
+.inlineWarning {
+  padding: 11px 12px;
+  border: 1px solid rgba(227, 179, 74, 0.42);
+  border-radius: 8px;
+  background: rgba(227, 179, 74, 0.09);
+  color: #f6d996;
+  line-height: 1.45;
+}
+
 .pageGrid,
 .panel.wide {
   margin: 30px;
