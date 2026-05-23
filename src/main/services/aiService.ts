@@ -61,7 +61,6 @@ export class AIGenerationService {
       n: 1,
       size: this.mapProviderSize(args.size)
     };
-
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
