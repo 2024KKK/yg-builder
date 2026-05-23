@@ -564,9 +564,13 @@ function GeneratePage(props: {
           ))}
         </div>
 
-        {props.project.styleTemplates.length > 0 && (
-          <div className="subPanel" style={{ padding: 10, gap: 6 }}>
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>💡 点击风格模板快速填充 —</span>
+        <div className="subPanel" style={{ padding: 10, gap: 6 }}>
+          <span style={{ fontSize: 11, color: "var(--muted)" }}>
+            {props.project.styleTemplates.length > 0
+              ? "💡 点击风格模板快速填充 —"
+              : "💡 尚无风格模板，请先在项目配置页添加"}
+          </span>
+          {props.project.styleTemplates.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {props.project.styleTemplates.map((t) => (
                 <button key={t.id} type="button" title="点击填入风格描述"
@@ -575,8 +579,8 @@ function GeneratePage(props: {
                 >{t.name}</button>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <div className="formGrid">
           <TextInput label="素材名称" value={name} onChange={setName} />
           <TextInput label="尺寸" value={size} onChange={setSize} />
