@@ -468,6 +468,15 @@ export class GenerationService {
 
   private async generateWithRetry(prompt: string, size: string, transparentBackground: boolean): Promise<Buffer> {
     const settings = await this.settingsService.getSettings();
+    if (settings.aiProvider === "local-draft") {
+      return this.aiService.generateImage({
+        prompt,
+        size,
+        transparentBackground,
+        settings
+      });
+    }
+
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -480,28 +489,18 @@ export class GenerationService {
         });
       } catch (error) {
         lastError = error;
-        if (attempt < 4 && this.isRateLimitError(error)) {
-          await this.sleep(8000 * attempt);
-          continue;
+        if (!this.isRateLimitError(error)) {
+          throw error;
         }
 
-        if (attempt >= 2 && !this.isRateLimitError(error)) {
-          break;
+        if (attempt < 4) {
+          await this.sleep(8000 * attempt);
         }
       }
     }
 
     if (this.isRateLimitError(lastError)) {
-      const draftSettings = {
-        ...settings,
-        aiProvider: "local-draft" as const
-      };
-      return this.aiService.generateImage({
-        prompt: `${prompt}\n\nFallback local draft after API rate limit.`,
-        size,
-        transparentBackground,
-        settings: draftSettings
-      });
+      throw new Error(`图片生成 API 连续限流，已重试 4 次但没有成功；不会生成本地假图。最后错误：${this.formatError(lastError)}`);
     }
 
     throw lastError instanceof Error ? lastError : new Error(String(lastError));

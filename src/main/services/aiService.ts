@@ -55,21 +55,20 @@ export class AIGenerationService {
 
     const endpoint = this.resolveOpenAIImageEndpoint(args.settings.apiBaseUrl);
     this.assertHttpEndpoint(endpoint, "OpenAI API Base URL");
+    const requestPayload: Record<string, unknown> = {
+      model: args.settings.model || "gpt-image-1",
+      prompt: args.prompt,
+      n: 1,
+      size: this.mapProviderSize(args.size)
+    };
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${args.settings.apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: args.settings.model || "gpt-image-1",
-        prompt: args.prompt,
-        n: 1,
-        size: this.mapProviderSize(args.size),
-        background: args.transparentBackground ? "transparent" : "opaque",
-        output_format: "png",
-        quality: args.settings.generationQuality
-      })
+      body: JSON.stringify(requestPayload)
     });
 
     const responseText = await response.text();

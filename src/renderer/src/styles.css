@@ -581,6 +581,8 @@ button {
 }
 
 .assetPreview img {
+  width: 92%;
+  height: 92%;
   max-width: 92%;
   max-height: 92%;
   image-rendering: pixelated;
