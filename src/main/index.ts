@@ -47,8 +47,8 @@ function createWindow(): void {
     height: 980,
     minWidth: 1120,
     minHeight: 760,
-    title: "AI Sprite Studio",
-    backgroundColor: "#0c0f12",
+    title: "AI Sprite Studio — Forge",
+    backgroundColor: "#07090b",
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       sandbox: false,
