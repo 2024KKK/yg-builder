@@ -1,76 +1,66 @@
-# AI Sprite Studio
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/ai--sprite--studio-v0.1.0-00d4ff?style=flat-square&labelColor=0b0e11">
+    <img src="https://img.shields.io/badge/ai--sprite--studio-v0.1.0-00d4ff?style=flat-square&labelColor=0b0e11" alt="version">
+  </picture>
+</p>
 
-Electron + React + TypeScript 桌面应用，用于把 AI 图片生成接入本地 2D 游戏素材流水线。它覆盖从项目配置、素材生成、后处理、预览、历史记录到 Unity / Godot / Tiled / ZIP 导出的完整 MVP 流程。
+<p align="center">
+  <img src="https://img.shields.io/badge/Electron-33.x-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron"/>
+  <img src="https://img.shields.io/badge/React-18.x-58c4dc?style=flat-square&logo=react&logoColor=white" alt="React"/>
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/Vite-6.x-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
+  <img src="https://img.shields.io/badge/license-MIT-8a9aa8?style=flat-square" alt="MIT License"/>
+</p>
 
-## 项目定位
+<p align="center">
+  <b>AI Sprite Studio</b> — Electron + React + TypeScript 桌面应用，<br/>
+  将 AI 图片生成接入本地 2D 游戏素材流水线。<br/>
+  从项目配置、素材生成、后处理、预览到多引擎导出的完整工作流。
+</p>
 
-AI Sprite Studio 面向独立游戏、美术原型和工具链验证场景。用户可以创建本地项目，定义游戏类型、美术风格、默认尺寸和导出目标，然后批量生成图标、道具、角色动作帧、怪物、背景、特效和 TileSet。
+---
 
-## 核心能力
+## Overview
 
-| 模块 | 能力 |
-| --- | --- |
-| 项目 | 创建本地目录、保存 `project.json`、管理最近项目 |
-| 生成 | 调用 OpenAI-compatible 图片 API、自定义 API 或本地草稿模式 |
-| 后处理 | 使用 Sharp 处理透明背景、裁切、统一尺寸和 PNG 输出 |
-| 批量 | 支持图标、道具、UI 素材批量名称列表生成 |
-| 动画 | 生成角色动作帧并合成 Sprite Sheet |
-| TileSet | 生成基础 Tile、预览图、metadata 和 Tiled `.tmx` |
-| 打包 | 合成 Texture Atlas、生成 JSON metadata、导出 ZIP |
-| 记录 | 保存生成历史、Prompt、参数和输出文件 |
+面向独立游戏开发者、美术原型师和工具链验证场景。创建本地项目，定义游戏类型、美术风格与导出目标，批量生成图标、道具、角色动作帧、怪物、背景、特效和 TileSet。所有数据与密钥均保存在本地，无云端依赖。
 
-## 页面结构
+## Features
 
-- 首页：新建项目、打开项目、最近项目
-- 项目配置：项目名称、游戏类型、风格、默认尺寸、导出目标
-- 素材生成：素材类型、描述、批量列表、动画和 TileSet 参数
-- 预览：单图、动画帧、Sprite Sheet、Atlas 和 metadata 入口
-- 风格：项目风格描述和风格模板
-- 导出：Unity、Godot、Tiled、通用 PNG + JSON、ZIP
-- 设置：API Key、API Base URL、默认路径、生成参数
+| Module | Capabilities |
+|--------|-------------|
+| **Project** | Create local directories, save `project.json`, manage recent projects |
+| **Generation** | Call OpenAI-compatible image API, custom API, or local draft mode |
+| **Post-Processing** | Sharp-based transparent background, crop, uniform size, PNG output |
+| **Batch** | Mass-generate icons / items / UI sprites from a name list |
+| **Animation** | Character pose frames → Sprite Sheet compositing |
+| **TileSet** | Base tiles, previews, metadata, Tiled `.tmx` export |
+| **Packing** | Texture Atlas synthesis, JSON metadata, ZIP bundle |
+| **History** | Generation log, prompt/parameter review, output file tracking |
 
-## 技术栈
-
-| 层级 | 技术 |
-| --- | --- |
-| 桌面壳 | Electron |
-| 前端 | React、TypeScript、lucide-react |
-| 构建 | Vite、electron-vite |
-| 图像处理 | Sharp |
-| 打包导出 | JSZip |
-| 本地存储 | JSON 文件、项目目录、Electron userData |
-
-## 快速开始
+## Quick Start
 
 ```bash
 npm install
 npm run dev
-```
-
-构建生产产物：
-
-```bash
+npm run typecheck
 npm run build
 ```
 
-构建输出目录：
+Build output lands in `out/`.
 
-```text
-out/
-```
+## AI API Configuration
 
-## AI API 配置
+Configure in the Settings page:
 
-在应用的设置页填写：
+| Field | Example |
+|-------|---------|
+| `AI API Provider` | `openai` \| `custom` \| `local-draft` |
+| `API Key` | Your image generation service key |
+| `API Base URL` | OpenAI-compatible endpoint, e.g. `https://example.com/v1/images/generations` |
+| `Model` | e.g. `gpt-image-2` |
 
-| 配置项 | 建议值 |
-| --- | --- |
-| `AI API Provider` | `openai`、`custom` 或 `local-draft` |
-| `API Key` | 图片生成服务的 Key |
-| `API Base URL` | OpenAI-compatible 图片接口，例如 `https://example.com/v1/images/generations` |
-| `Model` | 中转站或服务商支持的图片模型，例如 `gpt-image-2` |
-
-OpenAI-compatible 模式会发送最小兼容请求体：
+The client sends a minimal compatible request body:
 
 ```json
 {
@@ -81,24 +71,15 @@ OpenAI-compatible 模式会发送最小兼容请求体：
 }
 ```
 
-透明背景、裁切和目标尺寸统一由本地 Sharp 后处理完成，避免依赖不同中转站对高级图片参数的兼容性。
+Transparency, cropping, and target-size normalization are all handled locally by Sharp.
 
-## 本地草稿模式
+## Local Draft Mode
 
-`local-draft` 不调用外部 API，会生成本地占位 PNG。它适合验证：
+Set `Provider` to `local-draft` to generate placeholder PNGs without calling any external API. Useful for validating project creation, post-processing pipeline, Sprite Sheet / Atlas / TileSet synthesis, metadata, history, and ZIP export.
 
-- 项目创建和配置保存
-- 图像后处理流程
-- Sprite Sheet / Atlas / TileSet 合成
-- metadata、历史记录和 ZIP 导出
+## Project Structure
 
-正式出图请切换到外部图片 API。
-
-## 项目目录结构
-
-应用创建的项目目录大致如下：
-
-```text
+```
 project.json
 generated/
   raw/
@@ -112,24 +93,28 @@ exports/
 history/
 ```
 
-## 导出结果
+## Export Targets
 
-| 目标 | 内容 |
-| --- | --- |
-| Unity | PNG、Sprite Sheet、Atlas、JSON metadata、导入说明 |
-| Godot | PNG、Sprite Sheet、SpriteFrames 说明、JSON metadata、导入说明 |
-| Tiled | TileSet PNG、TileSet JSON、TMX、导入说明 |
-| Common | 通用 PNG + JSON |
-| ZIP | 完整导出资源包 |
+| Target | Contents |
+|--------|----------|
+| **Unity** | PNG, Sprite Sheet, Atlas, JSON metadata, import notes |
+| **Godot** | PNG, Sprite Sheet, SpriteFrames guide, JSON metadata, import notes |
+| **Tiled** | TileSet PNG, TileSet JSON, TMX, import notes |
+| **Phaser / Cocos** | PNG, Sprite Sheet, Atlas, JSON frame data |
+| **Common** | Generic PNG + JSON |
+| **ZIP** | Complete export archive bundle |
 
-## 常用命令
+## Tech Stack
 
-```bash
-npm run dev
-npm run typecheck
-npm run build
-```
+| Layer | Technology |
+|-------|-----------|
+| Desktop Shell | Electron 33 |
+| Frontend | React 18, TypeScript, Lucide React |
+| Build | Vite 6, electron-vite |
+| Image Processing | Sharp |
+| Archive | JSZip |
+| Storage | JSON files, project directory, Electron userData |
 
-## 说明
+## License
 
-所有项目数据和生成结果都保存在本地目录中。API Key 保存在 Electron `userData` 下的设置文件中，不会写入项目导出包。
+MIT
