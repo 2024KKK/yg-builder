@@ -148,5 +148,82 @@
   "gameType.towerDefense": "塔防",
   "gameType.other": "其他",
 
-  "lang.switch": "EN"
+  "lang.switch": "EN",
+
+  "assetType.icon": "图标",
+  "assetType.item": "道具",
+  "assetType.character": "角色",
+  "assetType.enemy": "怪物",
+  "assetType.tileset": "瓦片集",
+  "assetType.ui": "界面",
+  "assetType.background": "背景",
+  "assetType.effect": "特效",
+
+  "gameType.RPG": "角色扮演",
+  "gameType.平台跳跃": "平台跳跃",
+  "gameType.俯视角": "俯视角",
+  "gameType.横版动作": "横版动作",
+  "gameType.卡牌": "卡牌",
+  "gameType.塔防": "塔防",
+  "gameType.其他": "其他",
+
+  "background.transparent": "透明",
+  "background.solid": "纯色",
+  "background.custom": "自定义",
+
+  "view.side-view": "侧视角",
+  "view.top-down": "俯视角",
+  "view.four-direction": "四方向",
+  "view.eight-direction": "八方向",
+
+  "provider.openai": "OpenAI",
+  "provider.custom": "自定义接口",
+  "provider.local-draft": "本地草稿",
+
+  "quality.low": "低",
+  "quality.medium": "中",
+  "quality.high": "高",
+
+  "mode.text-to-image": "文本生成",
+  "mode.image-to-image": "参考图生成",
+
+  "role.subject": "主体参考",
+  "role.style": "风格参考",
+  "role.composition": "构图参考",
+  "role.palette": "色板参考",
+
+  "intent.preserve-subject": "保持主体",
+  "intent.preserve-style": "保持风格",
+  "intent.preserve-composition": "保持构图",
+  "intent.same-series": "同系列变体",
+  "intent.inpaint": "局部替换",
+
+  "strength.low": "低",
+  "strength.medium": "中",
+  "strength.high": "高",
+
+  "target.unity": "Unity",
+  "target.godot": "Godot",
+  "target.tiled": "Tiled",
+  "target.phaser": "Phaser",
+  "target.cocos": "Cocos",
+  "target.common": "通用",
+
+  "summary.mode": "生成方式",
+  "summary.type": "素材类型",
+  "summary.name": "素材名称",
+  "summary.size": "画布尺寸",
+  "summary.count": "生成数量",
+  "summary.transparent": "透明背景",
+  "summary.targets": "导出目标",
+  "summary.atlas": "图集输出",
+  "summary.sheet": "精灵表输出",
+  "summary.tiled": "瓦片地图输出",
+  "summary.refs": "参考图数量",
+  "summary.intent": "编辑意图",
+  "summary.strength": "参考强度",
+  "summary.mask": "蒙版",
+  "summary.detail": "对象细节提示词",
+  "summary.refRoles": "参考图用途",
+  "summary.refN": "第 {{n}} 张"
 }

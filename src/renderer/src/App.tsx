@@ -57,7 +57,7 @@ const exportTargetLabels: Record<ExportTarget, string> = {
   tiled: "Tiled",
   phaser: "Phaser",
   cocos: "Cocos",
-  common: "通用"
+  common: "Common"
 };
 const gameTypeOptions: SelectOption[] = [
   { value: "RPG", label: "角色扮演" },
@@ -90,8 +90,8 @@ const qualityOptions: SelectOption[] = [
   { value: "high", label: "高" }
 ];
 const generationModes: Array<{ value: GenerationMode; label: string }> = [
-  { value: "text-to-image", label: "文本生成" },
-  { value: "image-to-image", label: "参考图生成" }
+  { value: "text-to-image", label: "mode.text-to-image" },
+  { value: "image-to-image", label: "mode.image-to-image" }
 ];
 const referenceRoles: Array<{ value: ReferenceImageRole; label: string }> = [
   { value: "subject", label: "主体参考" },
@@ -123,7 +123,14 @@ const assetTypes: Array<{ value: AssetType; label: string }> = [
   { value: "background", label: "背景" },
   { value: "effect", label: "特效" }
 ];
-const assetTypeLabels = Object.fromEntries(assetTypes.map((option) => [option.value, option.label])) as Record<AssetType, string>;
+function useAssetTypeLabels(): Record<AssetType, string> {
+  const { t } = useTranslation();
+  return useMemo(() => ({
+    icon: t("assetType.icon"), item: t("assetType.item"), character: t("assetType.character"),
+    enemy: t("assetType.enemy"), tileset: t("assetType.tileset"), ui: t("assetType.ui"),
+    background: t("assetType.background"), effect: t("assetType.effect")
+  }), [t]);
+}
 
 const objectDetailTemplates: Record<AssetType, DetailTemplate[]> = {
   icon: [
@@ -779,7 +786,7 @@ function GeneratePage(props: {
               className={generationMode === mode.value ? "selected" : ""}
               onClick={() => setGenerationMode(mode.value)}
             >
-              {mode.label}
+              {t(mode.label)}
             </button>
           ))}
         </div>
@@ -897,50 +904,51 @@ function GeneratePage(props: {
 function TaskSummary(props: { input: GenerateAssetInput }): JSX.Element {
   const { t } = useTranslation();
   const input = props.input;
+  const yesNo = (val: boolean) => val ? t("quality.high") : t("quality.low");
   const lines = [
-    ["生成方式", input.generationMode === "image-to-image" ? "参考图生成" : "文本生成"],
-    ["素材类型", assetTypeLabels[input.assetType]],
-    ["素材名称", input.name || "未命名"],
-    ["画布尺寸", input.size],
-    ["生成数量", `${input.count}`],
-    ["透明背景", input.transparentBackground ? "是" : "否"],
-    ["导出目标", input.exportTargets.map((target) => exportTargetLabels[target]).join("、") || "未选择"],
-    ["图集输出", input.makeAtlas ? "生成" : "不生成"],
-    ["精灵表输出", input.makeSpriteSheet ? "生成" : "不生成"],
-    ["瓦片地图输出", input.makeTiled ? "生成" : "不生成"]
+    ["mode", input.generationMode === "image-to-image" ? t("mode.image-to-image") : t("mode.text-to-image")],
+    ["type", t("assetType." + input.assetType)],
+    ["name", input.name || "—"],
+    ["size", input.size],
+    ["count", `${input.count}`],
+    ["transparent", yesNo(input.transparentBackground)],
+    ["targets", input.exportTargets.map((t) => exportTargetLabels[t]).join(", ") || "—"],
+    ["atlas", yesNo(input.makeAtlas)],
+    ["sheet", yesNo(input.makeSpriteSheet)],
+    ["tiled", yesNo(input.makeTiled)]
   ];
 
   if (input.generationMode === "image-to-image") {
-    lines.push(["参考图数量", `${input.referenceImages.length}`]);
-    lines.push(["编辑意图", editIntentLabels[input.editIntent]]);
-    lines.push(["参考强度", referenceStrengthLabels[input.referenceStrength]]);
-    lines.push(["蒙版", input.maskImagePath ? "已选择" : "未选择"]);
+    lines.push(["refs", `${input.referenceImages.length}`]);
+    lines.push(["intent", t("intent." + input.editIntent)]);
+    lines.push(["strength", t("strength." + input.referenceStrength)]);
+    lines.push(["mask", input.maskImagePath ? "✓" : "—"]);
   }
 
   return (
     <div className="taskSummary">
-      {lines.map(([label, value]) => (
-        <div key={label}>
-          <span>{label}</span>
+      {lines.map(([key, value]) => (
+        <div key={key}>
+          <span>{t("summary." + key)}</span>
           <strong>{value}</strong>
         </div>
       ))}
       <section>
-        <span>描述</span>
-        <p>{input.description || "未填写"}</p>
+        <span>{t("generate.desc")}</span>
+        <p>{input.description || "—"}</p>
       </section>
       {input.detailPrompt && (
         <section>
-          <span>对象细节提示词</span>
+          <span>{t("summary.detail")}</span>
           <p>{input.detailPrompt}</p>
         </section>
       )}
       {input.generationMode === "image-to-image" && input.referenceImages.length > 0 && (
         <section>
-          <span>参考图用途</span>
+          <span>{t("summary.refRoles")}</span>
           <p>
             {input.referenceImages
-              .map((image, index) => `第 ${index + 1} 张：${referenceRoles.find((role) => role.value === image.role)?.label ?? image.role}`)
+              .map((image, index) => `${t("summary.refN", { n: index + 1 })}：${t("role." + image.role)}`)
               .join("；")}
           </p>
         </section>
@@ -1157,7 +1165,7 @@ function HistoryPage(props: { project: Project; history: GenerationHistoryRecord
             <div>
               <strong>{record.parameters.name || record.assetType}</strong>
               <span>
-                {assetTypeLabels[record.assetType]} · {record.parameters.generationMode === "image-to-image" ? "参考图生成" : "文本生成"} ·{" "}
+                {t("assetType." + record.assetType)} · {record.parameters.generationMode === "image-to-image" ? "参考图生成" : "文本生成"} ·{" "}
                 {new Date(record.createdAt).toLocaleString()}
               </span>
               <small>{record.outputFiles.join(" · ")}</small>
@@ -1257,7 +1265,7 @@ function AssetCard(props: {
       <div className="assetPreview">{dataUrl ? <img src={dataUrl} alt={props.asset.name} /> : <Boxes size={42} />}</div>
       <div className="assetBody">
         <strong>{props.asset.name}</strong>
-        <span>{assetTypeLabels[props.asset.type]} · {props.asset.size.width}x{props.asset.size.height}</span>
+        <span>{t("assetType." + props.asset.type)} · {props.asset.size.width}x{props.asset.size.height}</span>
         <small>{props.asset.files.length} {t("preview.files")}</small>
       </div>
       <div className="assetActions">
