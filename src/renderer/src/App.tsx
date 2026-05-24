@@ -69,25 +69,25 @@ const gameTypeOptions: SelectOption[] = [
   "其他"
 ];
 const backgroundOptions: SelectOption[] = [
-  { value: "transparent", label: "透明" },
-  { value: "solid", label: "纯色" },
-  { value: "custom", label: "自定义" }
+  { value: "transparent", label: "background.transparent" },
+  { value: "solid", label: "background.solid" },
+  { value: "custom", label: "background.custom" }
 ];
 const characterViewOptions: SelectOption[] = [
-  { value: "side-view", label: "侧视角" },
-  { value: "top-down", label: "俯视角" },
-  { value: "four-direction", label: "四方向" },
-  { value: "eight-direction", label: "八方向" }
+  { value: "side-view", label: "view.side-view" },
+  { value: "top-down", label: "view.top-down" },
+  { value: "four-direction", label: "view.four-direction" },
+  { value: "eight-direction", label: "view.eight-direction" }
 ];
 const providerOptions: SelectOption[] = [
-  { value: "openai", label: "OpenAI" },
-  { value: "custom", label: "自定义接口" },
-  { value: "local-draft", label: "本地草稿" }
+  { value: "openai", label: "provider.openai" },
+  { value: "custom", label: "provider.custom" },
+  { value: "local-draft", label: "provider.local-draft" }
 ];
 const qualityOptions: SelectOption[] = [
-  { value: "low", label: "低" },
-  { value: "medium", label: "中" },
-  { value: "high", label: "高" }
+  { value: "low", label: "quality.low" },
+  { value: "medium", label: "quality.medium" },
+  { value: "high", label: "quality.high" }
 ];
 const generationModes: Array<{ value: GenerationMode; label: string }> = [
   { value: "text-to-image", label: "mode.text-to-image" },
@@ -114,23 +114,15 @@ const referenceStrengthOptions: Array<{ value: ReferenceStrength; label: string 
 ];
 const referenceStrengthLabels = Object.fromEntries(referenceStrengthOptions.map((option) => [option.value, option.label])) as Record<ReferenceStrength, string>;
 const assetTypes: Array<{ value: AssetType; label: string }> = [
-  { value: "icon", label: "图标" },
-  { value: "item", label: "道具" },
-  { value: "character", label: "角色" },
-  { value: "enemy", label: "怪物" },
-  { value: "tileset", label: "瓦片集" },
-  { value: "ui", label: "界面" },
-  { value: "background", label: "背景" },
-  { value: "effect", label: "特效" }
+  { value: "icon", label: "assetType.icon" },
+  { value: "item", label: "assetType.item" },
+  { value: "character", label: "assetType.character" },
+  { value: "enemy", label: "assetType.enemy" },
+  { value: "tileset", label: "assetType.tileset" },
+  { value: "ui", label: "assetType.ui" },
+  { value: "background", label: "assetType.background" },
+  { value: "effect", label: "assetType.effect" }
 ];
-function useAssetTypeLabels(): Record<AssetType, string> {
-  const { t } = useTranslation();
-  return useMemo(() => ({
-    icon: t("assetType.icon"), item: t("assetType.item"), character: t("assetType.character"),
-    enemy: t("assetType.enemy"), tileset: t("assetType.tileset"), ui: t("assetType.ui"),
-    background: t("assetType.background"), effect: t("assetType.effect")
-  }), [t]);
-}
 
 const objectDetailTemplates: Record<AssetType, DetailTemplate[]> = {
   icon: [
@@ -514,7 +506,7 @@ function HomePage(props: {
             <article key={item.path} className="recentItem">
               <div>
                 <strong>{item.name}</strong>
-                <span>{gameTypeLabel(item.gameType)} · {item.style}</span>
+                <span>{gameTypeLabelT(t, item.gameType)} · {item.style}</span>
                 <small>{item.path}</small>
               </div>
               <div className="rowActions">
@@ -764,7 +756,7 @@ function GeneratePage(props: {
   return (
     <div className="pageGrid generation">
       <section className="panel">
-        <PanelTitle icon={Wand2} title={t("generate.title")} subtitle={t("generate.subtitle", { provider: providerLabel(props.settings.aiProvider), model: props.settings.model })} />
+        <PanelTitle icon={Wand2} title={t("generate.title")} subtitle={t("generate.subtitle", { provider: t(providerLabel(props.settings.aiProvider)), model: props.settings.model })} />
         {props.settings.aiProvider === "local-draft" && (
           <div className="inlineWarning">
             {t("generate.draftWarning")}
@@ -773,7 +765,7 @@ function GeneratePage(props: {
         <div className="typeRail">
           {assetTypes.map((type) => (
             <button key={type.value} className={assetType === type.value ? "selected" : ""} onClick={() => handleAssetTypeChange(type.value)}>
-              {type.label}
+              {t(type.label)}
             </button>
           ))}
         </div>
@@ -912,7 +904,7 @@ function TaskSummary(props: { input: GenerateAssetInput }): JSX.Element {
     ["size", input.size],
     ["count", `${input.count}`],
     ["transparent", yesNo(input.transparentBackground)],
-    ["targets", input.exportTargets.map((t) => exportTargetLabels[t]).join(", ") || "—"],
+    ["targets", input.exportTargets.map((et) => t("target." + et)).join(", ") || "—"],
     ["atlas", yesNo(input.makeAtlas)],
     ["sheet", yesNo(input.makeSpriteSheet)],
     ["tiled", yesNo(input.makeTiled)]
@@ -1165,7 +1157,7 @@ function HistoryPage(props: { project: Project; history: GenerationHistoryRecord
             <div>
               <strong>{record.parameters.name || record.assetType}</strong>
               <span>
-                {t("assetType." + record.assetType)} · {record.parameters.generationMode === "image-to-image" ? "参考图生成" : "文本生成"} ·{" "}
+                {t("assetType." + record.assetType)} · {record.parameters.generationMode === "image-to-image" ? t("mode.image-to-image") : t("mode.text-to-image")} ·{" "}
                 {new Date(record.createdAt).toLocaleString()}
               </span>
               <small>{record.outputFiles.join(" · ")}</small>
@@ -1276,8 +1268,8 @@ function AssetCard(props: {
       </div>
       {props.asset.exportTargets && props.asset.exportTargets.length > 0 && (
         <div className="assetActions" style={{ gap: 4 }}>
-          {props.asset.exportTargets.map((t) => (
-            <span key={t} className="pill" style={{ borderColor: "rgba(0,212,255,0.25)", color: "var(--cyan)", background: "var(--cyan-dim)" }}>{exportTargetLabels[t]}</span>
+          {props.asset.exportTargets.map((target) => (
+            <span key={target} className="pill" style={{ borderColor: "rgba(0,212,255,0.25)", color: "var(--cyan)", background: "var(--cyan-dim)" }}>{t("target." + target)}</span>
           ))}
         </div>
       )}
@@ -1445,17 +1437,18 @@ function Toggle(props: { label: string; value: boolean; onChange: (value: boolea
 }
 
 function TargetPicker(props: { value: ExportTarget[]; onChange: (value: ExportTarget[]) => void }): JSX.Element {
+  const { t } = useTranslation();
   function toggle(target: ExportTarget): void {
     props.onChange(props.value.includes(target) ? props.value.filter((item) => item !== target) : [...props.value, target]);
   }
 
   return (
     <div className="targetPicker">
-      <span>导出目标</span>
+      <span>{t("targetPicker.label")}</span>
       <div>
         {exportTargets.map((target) => (
           <button key={target} className={props.value.includes(target) ? "selected" : ""} onClick={() => toggle(target)}>
-            {exportTargetLabels[target]}
+            {t("target." + target)}
           </button>
         ))}
       </div>
@@ -1537,6 +1530,10 @@ function providerLabel(provider: AppSettings["aiProvider"]): string {
 function gameTypeLabel(gameType: string): string {
   const found = gameTypeOptions.find((option) => selectOptionValue(option) === gameType);
   return found ? selectOptionLabel(found) : gameType;
+}
+function gameTypeLabelT(t: (key: string) => string, gameType: string): string {
+  const found = gameTypeOptions.find((option) => selectOptionValue(option) === gameType);
+  return found ? t(selectOptionLabel(found)) : gameType;
 }
 
 function resolveFile(projectPath: string, filePath: string): string {
