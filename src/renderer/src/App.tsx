@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import i18n, { switchLanguage } from "./i18n";
 import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
@@ -189,6 +191,7 @@ const defaultSettings: AppSettings = {
 };
 
 function App(): JSX.Element {
+  const { t } = useTranslation();
   const [page, setPage] = useState<Page>("home");
   const [project, setProject] = useState<Project | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
@@ -210,13 +213,13 @@ function App(): JSX.Element {
 
   const navItems = useMemo(
     () => [
-      { page: "home" as Page, label: "首页", icon: Home, enabled: true },
-      { page: "project" as Page, label: "项目配置", icon: Gauge, enabled: Boolean(project) },
-      { page: "generate" as Page, label: "素材生成", icon: Wand2, enabled: Boolean(project) },
-      { page: "preview" as Page, label: "预览", icon: Image, enabled: Boolean(project) },
-      { page: "export" as Page, label: "导出", icon: Download, enabled: Boolean(project) },
-      { page: "history" as Page, label: "历史", icon: History, enabled: Boolean(project) },
-      { page: "settings" as Page, label: "设置", icon: Settings, enabled: true }
+      { page: "home" as Page, label: t("nav.home"), icon: Home, enabled: true },
+      { page: "project" as Page, label: t("nav.project"), icon: Gauge, enabled: Boolean(project) },
+      { page: "generate" as Page, label: t("nav.generate"), icon: Wand2, enabled: Boolean(project) },
+      { page: "preview" as Page, label: t("nav.preview"), icon: Image, enabled: Boolean(project) },
+      { page: "export" as Page, label: t("nav.export"), icon: Download, enabled: Boolean(project) },
+      { page: "history" as Page, label: t("nav.history"), icon: History, enabled: Boolean(project) },
+      { page: "settings" as Page, label: t("nav.settings"), icon: Settings, enabled: true }
     ],
     [project]
   );
@@ -284,8 +287,8 @@ function App(): JSX.Element {
             <Sparkles size={18} />
           </div>
           <div>
-            <strong>AI Sprite Studio</strong>
-            <span>二维素材流水线</span>
+            <strong>{t("brand.name")}</strong>
+            <span>{t("brand.tagline")}</span>
           </div>
         </div>
 
@@ -309,16 +312,21 @@ function App(): JSX.Element {
 
         <div className="projectDock">
           <span>当前项目</span>
-          <strong>{project?.name ?? "未打开"}</strong>
-          <small>{project?.path ?? "创建或打开一个本地素材项目"}</small>
+          <strong>{project?.name ?? t("project.dock.empty")}</strong>
+          <small>{project?.path ?? t("project.dock.hint")}</small>
         </div>
+        <button
+          className="ghostButton"
+          style={{ fontSize: 11, minHeight: 32, justifyContent: "center" }}
+          onClick={() => switchLanguage(i18n.language === "zh" ? "en" : "zh")}
+        >{t("lang.switch")}</button>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
           <div>
             <p>{pageLabel(page)}</p>
-            <h1>{project ? project.name : "AI Sprite Studio"}</h1>
+            <h1>{project ? project.name : t("brand.name")}</h1>
           </div>
           <div className="statusStrip">
             {busy ? (
@@ -329,7 +337,7 @@ function App(): JSX.Element {
             ) : (
               <span className="ready">
                 <Check size={15} />
-                就绪
+                {t("topbar.ready")}
               </span>
             )}
           </div>
