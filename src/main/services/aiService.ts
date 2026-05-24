@@ -76,10 +76,14 @@ export class AIGenerationService {
       model: args.settings.model || "gpt-image-1.5",
       prompt: args.prompt,
       n: 1,
-      size: this.mapProviderSize(args.size),
-      quality: args.settings.generationQuality,
-      background: args.transparentBackground ? "transparent" : "auto"
+      size: this.mapProviderSize(args.size)
     };
+
+    if (this.shouldSendOpenAIExtendedOptions(endpoint)) {
+      requestPayload.quality = args.settings.generationQuality;
+      requestPayload.background = args.transparentBackground ? "transparent" : "auto";
+    }
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -125,10 +129,13 @@ export class AIGenerationService {
     form.append("prompt", args.prompt);
     form.append("n", "1");
     form.append("size", this.mapProviderSize(args.size));
-    form.append("quality", args.settings.generationQuality);
-    form.append("background", args.transparentBackground ? "transparent" : "auto");
-    if (args.referenceStrength === "high") {
-      form.append("input_fidelity", "high");
+
+    if (this.shouldSendOpenAIExtendedOptions(endpoint)) {
+      form.append("quality", args.settings.generationQuality);
+      form.append("background", args.transparentBackground ? "transparent" : "auto");
+      if (args.referenceStrength === "high") {
+        form.append("input_fidelity", "high");
+      }
     }
 
     for (const reference of references) {
@@ -235,6 +242,14 @@ export class AIGenerationService {
     }
 
     return url.toString();
+  }
+
+  private shouldSendOpenAIExtendedOptions(endpoint: string): boolean {
+    try {
+      return new URL(endpoint).hostname === "api.openai.com";
+    } catch {
+      return false;
+    }
   }
 
   private assertHttpEndpoint(endpoint: string, label: string): void {
