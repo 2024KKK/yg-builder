@@ -221,7 +221,7 @@ function App(): JSX.Element {
       { page: "history" as Page, label: t("nav.history"), icon: History, enabled: Boolean(project) },
       { page: "settings" as Page, label: t("nav.settings"), icon: Settings, enabled: true }
     ],
-    [project]
+    [project, i18n.language]
   );
 
   async function unwrap<T>(request: Promise<IpcResponse<T>>): Promise<T> {
