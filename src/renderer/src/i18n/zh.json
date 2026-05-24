@@ -133,6 +133,7 @@
   "busy.deleteAsset": "删除素材",
   "busy.locateFile": "打开文件位置",
 
+  "message.completed": "完成",
   "message.created": "已创建项目: {{path}}",
   "message.saved": "保存完成",
   "message.generated": "生成完成：{{count}} 个文件，metadata: {{metadata}}",

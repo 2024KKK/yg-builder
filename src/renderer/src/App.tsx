@@ -276,7 +276,7 @@ function App(): JSX.Element {
     setMessage("");
     try {
       const result = await task();
-      setMessage(success?.(result) ?? `${label}完成`);
+      setMessage(success?.(result) ?? t("message.completed"));
       return result;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));

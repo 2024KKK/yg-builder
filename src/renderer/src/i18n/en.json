@@ -133,6 +133,7 @@
   "busy.deleteAsset": "Deleting asset",
   "busy.locateFile": "Locating file",
 
+  "message.completed": "Done",
   "message.created": "Created project",
   "message.saved": "Saved",
   "message.generated": "Generated: {{count}} files, metadata: {{metadata}}",
