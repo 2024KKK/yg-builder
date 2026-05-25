@@ -687,6 +687,7 @@ function GeneratePage(props: {
   const [makeAtlas, setMakeAtlas] = useState(props.settings.autoPackAtlas);
   const [characterView, setCharacterView] = useState("side-view");
   const [animations, setAnimations] = useState<AnimationConfig[]>(defaultAnimations);
+  const characterFrameTotal = useMemo(() => animations.reduce((sum, animation) => sum + Math.max(animation.frames, 0), 0), [animations]);
   const [makeSpriteSheet, setMakeSpriteSheet] = useState(true);
   const [tileTheme, setTileTheme] = useState("地牢");
   const [tileTypesText, setTileTypesText] = useState("地板\n墙体\n内角\n外角\n门\n水池\n裂缝\n宝箱");
@@ -803,7 +804,13 @@ function GeneratePage(props: {
         <div className="formGrid">
           <TextInput label={t("generate.name")} value={name} onChange={setName} />
           <TextInput label={t("generate.size")} value={size} onChange={setSize} />
-          <NumberInput label={t("generate.count")} value={count} min={1} max={64} onChange={setCount} />
+          <NumberInput
+            label={assetType === "character" ? t("generate.characterVersions") : t("generate.count")}
+            value={count}
+            min={1}
+            max={assetType === "character" ? 8 : 64}
+            onChange={setCount}
+          />
         </div>
         <TextArea label={t("generate.desc")} value={description} onChange={setDescription} />
         <div className="detailTemplateBlock">
@@ -848,6 +855,9 @@ function GeneratePage(props: {
 
         {assetType === "character" && (
           <div className="subPanel">
+            <div className="inlineNote compactNote">
+              {t("generate.characterSheetPlan", { versions: count, frames: characterFrameTotal })}
+            </div>
             <SelectInput
               label={t("generate.characterView")}
               value={characterView}
@@ -897,18 +907,23 @@ function TaskSummary(props: { input: GenerateAssetInput }): JSX.Element {
   const { t } = useTranslation();
   const input = props.input;
   const yesNo = (val: boolean) => val ? t("quality.high") : t("quality.low");
+  const characterFrameTotal = input.animations.reduce((sum, animation) => sum + Math.max(animation.frames, 0), 0);
   const lines = [
     ["mode", input.generationMode === "image-to-image" ? t("mode.image-to-image") : t("mode.text-to-image")],
     ["type", t("assetType." + input.assetType)],
     ["name", input.name || "—"],
     ["size", input.size],
-    ["count", `${input.count}`],
+    [input.assetType === "character" ? "characterVersions" : "count", `${input.count}`],
     ["transparent", yesNo(input.transparentBackground)],
     ["targets", input.exportTargets.map((et) => t("target." + et)).join(", ") || "—"],
     ["atlas", yesNo(input.makeAtlas)],
     ["sheet", yesNo(input.makeSpriteSheet)],
     ["tiled", yesNo(input.makeTiled)]
   ];
+
+  if (input.assetType === "character") {
+    lines.splice(5, 0, ["framesPerVersion", `${characterFrameTotal}`]);
+  }
 
   if (input.generationMode === "image-to-image") {
     lines.push(["refs", `${input.referenceImages.length}`]);
