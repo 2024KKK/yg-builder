@@ -9,7 +9,48 @@
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
     "build": "npm run typecheck && electron-vite build",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
     "typecheck": "tsc --noEmit"
+  },
+  "build": {
+    "appId": "com.topspeed.builder",
+    "productName": "Topspeed Builder",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "!node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "docs/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Topspeed Builder",
+      "unicode": true
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "docs/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "docs/icon.png"
+    }
   },
   "dependencies": {
     "fs-extra": "^11.2.0",
@@ -28,6 +69,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^2.3.0",
     "typescript": "^5.7.2"
   }
