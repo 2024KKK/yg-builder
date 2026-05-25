@@ -2,7 +2,7 @@ import path from "node:path";
 import { app } from "electron";
 import fs from "fs-extra";
 import type { AppSettings } from "@shared/types";
-import { readJsonFile, writeJsonFile } from "./utils";
+import { writeJsonFile } from "./utils";
 
 export class SettingsService {
   private readonly settingsPath: string;
@@ -15,7 +15,7 @@ export class SettingsService {
     const defaults = await this.getDefaultSettings();
     return {
       ...defaults,
-      ...(await readJsonFile<Partial<AppSettings>>(this.settingsPath, {}))
+      ...(await this.readSavedSettings())
     };
   }
 
@@ -43,5 +43,74 @@ export class SettingsService {
       autoPackAtlas: true,
       generationQuality: "low"
     };
+  }
+
+  private async readSavedSettings(): Promise<Partial<AppSettings>> {
+    try {
+      if (!(await fs.pathExists(this.settingsPath))) {
+        return {};
+      }
+
+      const raw = await fs.readFile(this.settingsPath, "utf8");
+      try {
+        return JSON.parse(raw) as Partial<AppSettings>;
+      } catch {
+        return this.readLooseSettings(raw);
+      }
+    } catch {
+      return {};
+    }
+  }
+
+  private readLooseSettings(raw: string): Partial<AppSettings> {
+    const output: Partial<AppSettings> = {};
+
+    this.readLooseString(raw, output, "aiProvider");
+    this.readLooseString(raw, output, "apiKey");
+    this.readLooseString(raw, output, "apiBaseUrl");
+    this.readLooseString(raw, output, "model");
+    this.readLooseString(raw, output, "defaultProjectRoot");
+    this.readLooseString(raw, output, "defaultExportDirectory");
+    this.readLooseString(raw, output, "defaultImageSize");
+    this.readLooseString(raw, output, "generationQuality");
+
+    this.readLooseNumber(raw, output, "defaultGenerationCount");
+
+    this.readLooseBoolean(raw, output, "savePromptHistory");
+    this.readLooseBoolean(raw, output, "autoTransparent");
+    this.readLooseBoolean(raw, output, "autoTrim");
+    this.readLooseBoolean(raw, output, "autoPackAtlas");
+
+    return output;
+  }
+
+  private readLooseString<K extends keyof AppSettings>(raw: string, output: Partial<AppSettings>, key: K): void {
+    const match = raw.match(new RegExp(`"${String(key)}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`));
+    if (match) {
+      output[key] = this.decodeLooseJsonString(match[1]) as AppSettings[K];
+    }
+  }
+
+  private readLooseNumber<K extends keyof AppSettings>(raw: string, output: Partial<AppSettings>, key: K): void {
+    const match = raw.match(new RegExp(`"${String(key)}"\\s*:\\s*(\\d+)`));
+    if (match) {
+      output[key] = Number(match[1]) as AppSettings[K];
+    }
+  }
+
+  private readLooseBoolean<K extends keyof AppSettings>(raw: string, output: Partial<AppSettings>, key: K): void {
+    const match = raw.match(new RegExp(`"${String(key)}"\\s*:\\s*(true|false)`));
+    if (match) {
+      output[key] = (match[1] === "true") as AppSettings[K];
+    }
+  }
+
+  private decodeLooseJsonString(value: string): string {
+    const repaired = value.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+    try {
+      return JSON.parse(`"${repaired}"`) as string;
+    } catch {
+      return value.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+    }
   }
 }

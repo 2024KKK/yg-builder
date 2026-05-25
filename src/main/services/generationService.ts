@@ -1,6 +1,7 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import fs from "fs-extra";
+import sharp from "sharp";
 import type {
   Asset,
   GenerateAssetInput,
@@ -30,6 +31,13 @@ interface GeneratedFrame {
 
 interface ResolvedReferenceImage extends ReferenceImageInput {
   filePath: string;
+}
+
+interface FrameDiagnostic {
+  file: string;
+  alphaRatio: number;
+  largeComponents: number;
+  warnings: string[];
 }
 
 export class GenerationService {
@@ -175,7 +183,7 @@ export class GenerationService {
     const logs: string[] = [];
     const runId = randomUUID();
     const assetName = sanitizeFileName(input.name || "character");
-    const size = parseSize(input.size);
+    const frameSize = parseSize(input.size);
     const animations = input.animations.length
       ? input.animations
       : [
@@ -183,55 +191,116 @@ export class GenerationService {
           { name: "行走", frames: 4, fps: 8, loop: true },
           { name: "攻击", frames: 4, fps: 10, loop: false }
         ];
+    const versionCount = Math.max(input.count, 1);
+    const columns = Math.max(...animations.map((animation) => animation.frames), 1);
+    const rows = Math.max(animations.length, 1);
+    const sheetSize = {
+      width: frameSize.width * columns,
+      height: frameSize.height * rows
+    };
+    const sheetSizeText = `${sheetSize.width}x${sheetSize.height}`;
     const frames: GeneratedFrame[] = [];
     const prompts: string[] = [];
+    const sourceSheets: string[] = [];
+    const sheetPaths: string[] = [];
+    const sheetMetadataPaths: string[] = [];
+    const diagnostics: FrameDiagnostic[] = [];
     const referenceImages = this.resolveReferenceImages(project, input);
     const maskImagePath = this.resolveMaskImagePath(project, input);
     const referenceGuidance = this.buildReferenceGuidance(input);
 
-    for (const animation of animations) {
-      for (let frameIndex = 0; frameIndex < animation.frames; frameIndex += 1) {
-        const fileName = `character_${assetName}_${animation.name}_${String(frameIndex).padStart(2, "0")}.png`;
-        const rawPath = path.join(project.path, "generated", "raw", runId, fileName);
-        const processedPath = path.join(project.path, "sprites", "characters", assetName, fileName);
-        const prompt = this.aiService.buildPrompt({
-          assetType: "角色动画帧",
-          name: input.name,
-          description: input.description,
-          style: this.buildStylePrompt(project, input),
-          size: input.size,
-          transparentBackground: input.transparentBackground,
-          extra: [
-            `角色视角：${this.characterViewLabel(input.characterView)}。`,
-            `动画动作：${animation.name}。第 ${frameIndex + 1} 帧，共 ${animation.frames} 帧。`,
-            "所有帧保持同一角色身份、轮廓、服装、比例和镜头角度。",
-            referenceGuidance
-          ].join(" ")
-        });
-        prompts.push(prompt);
+    for (let versionIndex = 0; versionIndex < versionCount; versionIndex += 1) {
+      const versionLabel = `v${String(versionIndex + 1).padStart(2, "0")}`;
+      const versionOutputName = versionCount > 1 ? `${assetName}_${versionLabel}` : assetName;
+      const versionDirectory = path.join(project.path, "sprites", "characters", assetName, versionLabel);
+      const sourceSheetName = `character_${assetName}_${versionLabel}_source_sheet.png`;
+      const rawPath = path.join(project.path, "generated", "raw", runId, sourceSheetName);
+      const sourceSheetPath = path.join(versionDirectory, sourceSheetName);
+      const prompt = this.aiService.buildPrompt({
+        assetType: "完整角色动作表",
+        name: versionCount > 1 ? `${input.name} ${versionLabel}` : input.name,
+        description: input.description,
+        style: this.buildStylePrompt(project, input),
+        size: sheetSizeText,
+        transparentBackground: input.transparentBackground,
+        extra: [
+          this.buildCharacterSheetGuidance(input, animations, columns, rows),
+          versionCount > 1 ? `这是第 ${versionIndex + 1} 套候选角色版本，必须保持本套内部所有动作帧一致。` : "",
+          referenceGuidance
+        ].join(" ")
+      });
+      prompts.push(prompt);
 
-        try {
-          const image = await this.generateWithRetry(prompt, input.size, input.transparentBackground, input, referenceImages, maskImagePath);
-          await fs.ensureDir(path.dirname(rawPath));
-          await fs.writeFile(rawPath, image);
-          await this.imageService.saveProcessedImage(image, processedPath, {
-            width: size.width,
-            height: size.height,
-            transparentBackground: input.transparentBackground,
-            trim: true
-          });
+      try {
+        const image = await this.generateWithRetry(prompt, sheetSizeText, input.transparentBackground, input, referenceImages, maskImagePath);
+        const normalizedSheet = await this.normalizeCharacterSheet(image, sheetSize);
+        await fs.ensureDir(path.dirname(rawPath));
+        await fs.writeFile(rawPath, image);
+        await fs.ensureDir(path.dirname(sourceSheetPath));
+        await fs.writeFile(sourceSheetPath, normalizedSheet);
+        sourceSheets.push(toRelative(project.path, sourceSheetPath));
+        logs.push(`生成角色动作表: ${sourceSheetPath}`);
 
-          frames.push({
-            absolutePath: processedPath,
-            relativePath: toRelative(project.path, processedPath),
-            name: fileName,
-            animation: animation.name,
-            frameIndex
+        const versionFrames: GeneratedFrame[] = [];
+        for (let rowIndex = 0; rowIndex < animations.length; rowIndex += 1) {
+          const animation = animations[rowIndex];
+          for (let frameIndex = 0; frameIndex < animation.frames; frameIndex += 1) {
+            const fileName = `character_${assetName}_${versionLabel}_${animation.name}_${String(frameIndex).padStart(2, "0")}.png`;
+            const processedPath = path.join(versionDirectory, fileName);
+            const frameBuffer = await sharp(normalizedSheet)
+              .extract({
+                left: frameIndex * frameSize.width,
+                top: rowIndex * frameSize.height,
+                width: frameSize.width,
+                height: frameSize.height
+              })
+              .png()
+              .toBuffer();
+
+            await this.imageService.saveProcessedImage(frameBuffer, processedPath, {
+              width: frameSize.width,
+              height: frameSize.height,
+              transparentBackground: input.transparentBackground,
+              trim: false
+            });
+
+            const frame: GeneratedFrame = {
+              absolutePath: processedPath,
+              relativePath: toRelative(project.path, processedPath),
+              name: fileName,
+              animation: animation.name,
+              frameIndex
+            };
+            frames.push(frame);
+            versionFrames.push(frame);
+
+            const diagnostic = await this.inspectCharacterFrame(processedPath, frameSize);
+            diagnostics.push({ ...diagnostic, file: frame.relativePath });
+            if (diagnostic.warnings.length > 0) {
+              logs.push(`角色帧诊断 ${frame.relativePath}: ${diagnostic.warnings.join("；")}`);
+            }
+          }
+        }
+
+        if (input.makeSpriteSheet && versionFrames.length > 0) {
+          const sheet = await this.spriteSheetService.createSpriteSheet({
+            projectPath: project.path,
+            outputName: versionOutputName,
+            frames: versionFrames.map((frame) => ({
+              filePath: frame.absolutePath,
+              name: frame.name,
+              animation: frame.animation,
+              frameIndex: frame.frameIndex
+            })),
+            animations,
+            size: input.size
           });
-          logs.push(`生成角色帧: ${processedPath}`);
+          sheetPaths.push(sheet.sheetPath);
+          sheetMetadataPaths.push(sheet.metadataPath);
+          logs.push(`生成精灵表: ${path.join(project.path, sheet.sheetPath)}`);
+        }
       } catch (error) {
-          logs.push(`角色帧失败 ${animation.name}#${frameIndex}: ${this.formatError(error)}`);
-      }
+        logs.push(`角色版本失败 ${versionLabel}: ${this.formatError(error)}`);
       }
     }
 
@@ -239,26 +308,7 @@ export class GenerationService {
       throw new Error(`角色序列帧生成失败，没有成功输出。日志：${logs.join(" | ")}`);
     }
 
-    let sheetPath: string | undefined;
-    let sheetMetadataPath: string | undefined;
-    if (input.makeSpriteSheet) {
-      const sheet = await this.spriteSheetService.createSpriteSheet({
-        projectPath: project.path,
-        outputName: assetName,
-        frames: frames.map((frame) => ({
-          filePath: frame.absolutePath,
-          name: frame.name,
-          animation: frame.animation,
-          frameIndex: frame.frameIndex
-        })),
-        animations,
-        size: input.size
-      });
-      sheetPath = sheet.sheetPath;
-      sheetMetadataPath = sheet.metadataPath;
-      logs.push(`生成精灵表: ${path.join(project.path, sheetPath)}`);
-    }
-
+    const sheetPath = sheetPaths[0];
     const files = frames.map((frame) => frame.relativePath);
     const metadataPath = path.join(project.path, "sprites", "characters", assetName, `${assetName}_metadata.json`);
     await writeJsonFile(metadataPath, {
@@ -267,10 +317,22 @@ export class GenerationService {
       style: project.style,
       detailPrompt: this.resolveDetailPrompt(input),
       ...this.buildGenerationMetadata(input),
-      size,
+      generationStrategy: "character-sheet-slice",
+      characterVersions: versionCount,
+      sheetGrid: {
+        columns,
+        rows,
+        frameSize,
+        sheetSize
+      },
+      sourceSheets,
+      diagnostics,
+      size: frameSize,
       files,
       sheet: sheetPath,
-      sheetMetadata: sheetMetadataPath,
+      sheets: sheetPaths,
+      sheetMetadata: sheetMetadataPaths[0],
+      sheetMetadataFiles: sheetMetadataPaths,
       animations,
       prompt: prompts.join("\n\n---\n\n"),
       exportTargets: input.exportTargets,
@@ -280,7 +342,7 @@ export class GenerationService {
     const asset = this.createAsset(input, {
       id: runId,
       project,
-      files: [...files, sheetPath].filter(Boolean) as string[],
+      files: [...files, ...sourceSheets, ...sheetPaths].filter(Boolean) as string[],
       metadataPath: toRelative(project.path, metadataPath),
       sheetPath,
       prompt: prompts.join("\n\n---\n\n")
@@ -292,7 +354,7 @@ export class GenerationService {
       asset,
       logs,
       files,
-      [sheetPath, sheetMetadataPath, toRelative(project.path, metadataPath)].filter(Boolean) as string[]
+      [...sourceSheets, ...sheetPaths, ...sheetMetadataPaths, toRelative(project.path, metadataPath)].filter(Boolean) as string[]
     );
 
     return {
@@ -302,6 +364,137 @@ export class GenerationService {
       sheetPath,
       logs
     };
+  }
+
+  private buildCharacterSheetGuidance(
+    input: GenerateAssetInput,
+    animations: GenerateAssetInput["animations"],
+    columns: number,
+    rows: number
+  ): string {
+    const rowPlan = animations
+      .map((animation, index) => `第 ${index + 1} 行：${animation.name}，从左到右 ${animation.frames} 帧。`)
+      .join(" ");
+
+    return [
+      "请生成一张完整的角色动作表，不要生成单张角色插图。",
+      `固定网格布局为 ${columns} 列 x ${rows} 行，每个格子是一帧。`,
+      rowPlan,
+      `角色视角：${this.characterViewLabel(input.characterView)}。`,
+      "所有格子必须是同一个角色：同一脸型、发型、服装、道具、身高比例、色板和轮廓。",
+      "每个格子只允许出现一个角色姿势，角色要居中，脚底基线一致，大小一致。",
+      "不要文字、不要标签、不要边框、不要网格线、不要额外装饰、不要多个角色。",
+      "不要把整套小图压进某一个格子；整张输出本身就是动作表。"
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  private async normalizeCharacterSheet(input: Buffer, size: { width: number; height: number }): Promise<Buffer> {
+    return sharp(input)
+      .ensureAlpha()
+      .resize({
+        width: size.width,
+        height: size.height,
+        fit: "fill",
+        kernel: sharp.kernel.nearest
+      })
+      .png()
+      .toBuffer();
+  }
+
+  private async inspectCharacterFrame(filePath: string, expectedSize: { width: number; height: number }): Promise<Omit<FrameDiagnostic, "file">> {
+    const { data, info } = await sharp(filePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const channels = info.channels;
+    const total = info.width * info.height;
+    const mask = new Uint8Array(total);
+    let alphaPixels = 0;
+    let minX = info.width;
+    let minY = info.height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let index = 0; index < total; index += 1) {
+      const alpha = data[index * channels + 3];
+      if (alpha > 12) {
+        mask[index] = 1;
+        alphaPixels += 1;
+        const x = index % info.width;
+        const y = Math.floor(index / info.width);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+
+    const alphaRatio = total > 0 ? alphaPixels / total : 0;
+    const warnings: string[] = [];
+    if (alphaPixels === 0) {
+      warnings.push("空白帧");
+    }
+    if (alphaRatio > 0 && alphaRatio < 0.015) {
+      warnings.push("主体过小，疑似整套图被压缩进单帧或生成失败");
+    }
+    if (alphaRatio > 0.78) {
+      warnings.push("透明区域过少，疑似背景未清理或整格被填满");
+    }
+
+    const bboxWidth = maxX >= minX ? maxX - minX + 1 : 0;
+    const bboxHeight = maxY >= minY ? maxY - minY + 1 : 0;
+    if (bboxWidth > expectedSize.width * 0.94 && bboxHeight > expectedSize.height * 0.94 && alphaRatio > 0.45) {
+      warnings.push("主体占满整格，疑似多状态套图或背景占用");
+    }
+
+    const largeComponents = this.countLargeAlphaComponents(mask, info.width, info.height, Math.max(32, Math.floor(total * 0.055)));
+    if (largeComponents > 2) {
+      warnings.push("检测到多个分离主体，疑似一格多角色");
+    }
+
+    return {
+      alphaRatio: Number(alphaRatio.toFixed(4)),
+      largeComponents,
+      warnings
+    };
+  }
+
+  private countLargeAlphaComponents(mask: Uint8Array, width: number, height: number, minPixels: number): number {
+    const visited = new Uint8Array(mask.length);
+    const stack: number[] = [];
+    let largeComponents = 0;
+
+    for (let start = 0; start < mask.length; start += 1) {
+      if (!mask[start] || visited[start]) continue;
+
+      let size = 0;
+      visited[start] = 1;
+      stack.push(start);
+
+      while (stack.length > 0) {
+        const index = stack.pop() as number;
+        size += 1;
+        const x = index % width;
+        const y = Math.floor(index / width);
+        const neighbors = [
+          x > 0 ? index - 1 : -1,
+          x < width - 1 ? index + 1 : -1,
+          y > 0 ? index - width : -1,
+          y < height - 1 ? index + width : -1
+        ];
+
+        for (const next of neighbors) {
+          if (next < 0 || !mask[next] || visited[next]) continue;
+          visited[next] = 1;
+          stack.push(next);
+        }
+      }
+
+      if (size >= minPixels) {
+        largeComponents += 1;
+      }
+    }
+
+    return largeComponents;
   }
 
   private async generateTileset(project: Project, input: GenerateAssetInput): Promise<GeneratedAssetResult> {
@@ -534,18 +727,22 @@ export class GenerationService {
         });
       } catch (error) {
         lastError = error;
-        if (!this.isRateLimitError(error)) {
+        if (!this.isRetriableImageError(error)) {
           throw error;
         }
 
         if (attempt < 4) {
-          await this.sleep(8000 * attempt);
+          await this.sleep(this.isRateLimitError(error) ? 8000 * attempt : 3000 * attempt);
         }
       }
     }
 
     if (this.isRateLimitError(lastError)) {
       throw new Error(`图片生成接口连续限流，已重试 4 次但没有成功；不会生成本地假图。最后错误：${this.formatError(lastError)}`);
+    }
+
+    if (this.isTransientImageError(lastError)) {
+      throw new Error(`图片生成请求连续网络失败，已重试 4 次但没有成功。最后错误：${this.formatError(lastError)}`);
     }
 
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -562,6 +759,26 @@ export class GenerationService {
   private isRateLimitError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
     return message.includes("HTTP 429") || message.toLowerCase().includes("too many requests");
+  }
+
+  private isRetriableImageError(error: unknown): boolean {
+    return this.isRateLimitError(error) || this.isTransientImageError(error);
+  }
+
+  private isTransientImageError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return (
+      lower.includes("fetch failed") ||
+      lower.includes("network") ||
+      lower.includes("timeout") ||
+      lower.includes("econnreset") ||
+      lower.includes("etimedout") ||
+      lower.includes("und_err_connect_timeout") ||
+      message.includes("HTTP 502") ||
+      message.includes("HTTP 503") ||
+      message.includes("HTTP 504")
+    );
   }
 
   private sleep(ms: number): Promise<void> {

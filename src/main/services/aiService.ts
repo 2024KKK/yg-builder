@@ -84,14 +84,14 @@ export class AIGenerationService {
       requestPayload.background = args.transparentBackground ? "transparent" : "auto";
     }
 
-    const response = await fetch(endpoint, {
+    const response = await this.fetchWithContext(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${args.settings.apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(requestPayload)
-    });
+    }, "OpenAI");
 
     const responseText = await response.text();
     if (!response.ok) {
@@ -146,13 +146,13 @@ export class AIGenerationService {
       form.append("mask", await this.fileToBlob(args.maskImagePath), path.basename(args.maskImagePath));
     }
 
-    const response = await fetch(endpoint, {
+    const response = await this.fetchWithContext(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${args.settings.apiKey}`
       },
       body: form
-    });
+    }, "OpenAI");
 
     return this.readImageResponse(response, "OpenAI", endpoint);
   }
@@ -192,18 +192,18 @@ export class AIGenerationService {
         form.append("mask", await this.fileToBlob(args.maskImagePath), path.basename(args.maskImagePath));
       }
 
-      const response = await fetch(endpoint, {
+      const response = await this.fetchWithContext(endpoint, {
         method: "POST",
         headers: {
           ...(args.settings.apiKey ? { Authorization: `Bearer ${args.settings.apiKey}` } : {})
         },
         body: form
-      });
+      }, "自定义接口");
 
       return this.readImageResponse(response, "自定义接口", endpoint);
     }
 
-    const response = await fetch(endpoint, {
+    const response = await this.fetchWithContext(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -215,7 +215,7 @@ export class AIGenerationService {
         model: args.settings.model,
         transparentBackground: args.transparentBackground
       })
-    });
+    }, "自定义接口");
 
     return this.readImageResponse(response, "自定义接口", endpoint);
   }
@@ -318,7 +318,7 @@ export class AIGenerationService {
     }
 
     if (url) {
-      const imageResponse = await fetch(url);
+      const imageResponse = await this.fetchWithContext(url, undefined, `${provider} 图片下载`);
       if (!imageResponse.ok) {
         throw new Error(`下载${provider}图片失败: HTTP ${imageResponse.status} ${imageResponse.statusText}`);
       }
@@ -331,6 +331,31 @@ export class AIGenerationService {
   private summarizeBody(body: string): string {
     const summary = body.replace(/\s+/g, " ").trim().slice(0, 220);
     return summary ? `响应摘要: ${summary}` : "响应正文为空。";
+  }
+
+  private async fetchWithContext(input: string, init: RequestInit | undefined, provider: string): Promise<Response> {
+    try {
+      return await fetch(input, init);
+    } catch (error) {
+      throw new Error(`${provider} 请求失败: ${this.describeFetchError(error)}; URL: ${input}`);
+    }
+  }
+
+  private describeFetchError(error: unknown): string {
+    if (!(error instanceof Error)) {
+      return String(error);
+    }
+
+    const cause = error.cause as { name?: string; message?: string; code?: string } | undefined;
+    const details = [error.message];
+    if (cause?.code) {
+      details.push(`code=${cause.code}`);
+    }
+    if (cause?.name || cause?.message) {
+      details.push(`cause=${[cause.name, cause.message].filter(Boolean).join(": ")}`);
+    }
+
+    return details.join("; ");
   }
 
   private mapProviderSize(size: string): string {
