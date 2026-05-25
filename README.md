@@ -57,12 +57,13 @@
 
 ```bash
 npm install
-npm run dev
-npm run typecheck
-npm run build
+npm run dev       # 开发模式
+npm run typecheck # 类型检查
+npm run build     # 构建到 out/
+npm run dist:win  # 打包 Windows 安装包（输出到 release/）
 ```
 
-构建产物输出到 `out/`。
+一键安装包位于 `release/Topspeed Builder Setup 1.0.0.exe`。
 
 ## 智能生成接口配置
 
@@ -176,12 +177,13 @@ Built for indie developers, art prototypers, and toolchain validators. Create lo
 
 ```bash
 npm install
-npm run dev
-npm run typecheck
-npm run build
+npm run dev       # dev mode
+npm run typecheck # type checking
+npm run build     # compile to out/
+npm run dist:win  # package Windows installer (output in release/)
 ```
 
-Build output → `out/`.
+One-click installer at `release/Topspeed Builder Setup 1.0.0.exe`.
 
 ## AI API Configuration
 
