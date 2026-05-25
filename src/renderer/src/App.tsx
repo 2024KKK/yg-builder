@@ -675,6 +675,7 @@ function GeneratePage(props: {
   const [name, setName] = useState(defaultPresets.name);
   const [description, setDescription] = useState(defaultPresets.description);
   const [detailPrompt, setDetailPrompt] = useState("");
+  const [selectedDetailTemplateIds, setSelectedDetailTemplateIds] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<ReferenceDraft[]>([]);
   const [editIntent, setEditIntent] = useState<EditIntent>("preserve-subject");
   const [referenceStrength, setReferenceStrength] = useState<ReferenceStrength>("medium");
@@ -724,8 +725,35 @@ function GeneratePage(props: {
     setName(n);
     setDescription(d);
     setDetailPrompt("");
+    setSelectedDetailTemplateIds([]);
     setSize(s);
     setTransparentBackground(t);
+  }
+
+  function composeDetailPrompt(ids: string[]): string {
+    return ids
+      .map((id) => detailTemplates.find((template) => template.id === id)?.prompt)
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  function handleDetailTemplateToggle(template: DetailTemplate): void {
+    const nextIds = selectedDetailTemplateIds.includes(template.id)
+      ? selectedDetailTemplateIds.filter((id) => id !== template.id)
+      : [...selectedDetailTemplateIds, template.id];
+
+    setSelectedDetailTemplateIds(nextIds);
+    setDetailPrompt(composeDetailPrompt(nextIds));
+  }
+
+  function handleDetailPromptChange(value: string): void {
+    setDetailPrompt(value);
+    setSelectedDetailTemplateIds([]);
+  }
+
+  function clearDetailPrompt(): void {
+    setDetailPrompt("");
+    setSelectedDetailTemplateIds([]);
   }
 
   const input: GenerateAssetInput = {
@@ -820,29 +848,33 @@ function GeneratePage(props: {
               <span>{t("generate.detailTemplateHint")}</span>
             </div>
             {detailPrompt && (
-              <button className="miniClearButton" type="button" onClick={() => setDetailPrompt("")}>
+              <button className="miniClearButton" type="button" onClick={clearDetailPrompt}>
                 {t("generate.clear")}
               </button>
             )}
           </div>
           <div className="detailTemplateGrid">
-            {detailTemplates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className={detailPrompt === template.prompt ? "detailTemplateCard selected" : "detailTemplateCard"}
-                title={t("generate.detailInject")}
-                onClick={() => setDetailPrompt(template.prompt)}
-              >
-                <strong>{template.name}</strong>
-                <span>{template.prompt}</span>
-                <small>{template.meta}</small>
-                <em>{t("generate.detailInject")}</em>
-              </button>
-            ))}
+            {detailTemplates.map((template) => {
+              const selected = selectedDetailTemplateIds.includes(template.id);
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  aria-pressed={selected}
+                  className={selected ? "detailTemplateCard selected" : "detailTemplateCard"}
+                  title={selected ? t("generate.detailRemove") : t("generate.detailAdd")}
+                  onClick={() => handleDetailTemplateToggle(template)}
+                >
+                  <strong>{template.name}</strong>
+                  <span>{template.prompt}</span>
+                  <small>{template.meta}</small>
+                  <em>{selected ? t("generate.detailSelected") : t("generate.detailAdd")}</em>
+                </button>
+              );
+            })}
           </div>
         </div>
-        <TextArea label={t("generate.detailPrompt")} value={detailPrompt} onChange={setDetailPrompt} />
+        <TextArea label={t("generate.detailPrompt")} value={detailPrompt} onChange={handleDetailPromptChange} />
         <Toggle label={t("generate.transparent")} value={transparentBackground} onChange={setTransparentBackground} />
         <TargetPicker value={targets} onChange={setTargets} />
 

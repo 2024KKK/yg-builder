@@ -243,8 +243,11 @@
   "summary.refN": "第 {{n}} 张",
 
   "generate.detailTemplate": "对象细节模板",
-  "generate.detailTemplateHint": "点击卡片即可注入下方对象细节提示词",
+  "generate.detailTemplateHint": "点击小卡片可叠加提示词，再次点击取消；可一键清除",
   "generate.detailInject": "点击注入提示词",
+  "generate.detailAdd": "添加",
+  "generate.detailRemove": "取消添加",
+  "generate.detailSelected": "已添加",
   "generate.clear": "清空",
   "generate.detailPrompt": "对象细节提示词（可选，可编辑）",
   "generate.refImages": "参考图",

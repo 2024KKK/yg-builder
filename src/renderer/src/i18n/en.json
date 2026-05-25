@@ -224,8 +224,11 @@
   "summary.refN": "#{{n}}",
 
   "generate.detailTemplate": "Detail Templates",
-  "generate.detailTemplateHint": "Click a card to inject detail prompt below",
+  "generate.detailTemplateHint": "Click chips to stack detail prompts; click again to remove, or clear all",
   "generate.detailInject": "Click to inject",
+  "generate.detailAdd": "Add",
+  "generate.detailRemove": "Remove",
+  "generate.detailSelected": "Added",
   "generate.clear": "Clear",
   "generate.detailPrompt": "Detail Prompt (optional, editable)",
   "generate.refImages": "Reference Images",
