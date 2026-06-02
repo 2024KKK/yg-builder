@@ -55,7 +55,8 @@ export class ImageProcessingService {
 
     const alreadyTransparent = this.hasRealAlphaChannel(data, channels, info.width * info.height);
     if (alreadyTransparent) {
-      return sharp(data, {
+      const cleaned = this.defringeAlpha(data, info);
+      return sharp(cleaned, {
         raw: { width: info.width, height: info.height, channels: channels as Raw["channels"] }
       }).png().toBuffer();
     }
@@ -95,12 +96,55 @@ export class ImageProcessingService {
     let fullyTransparent = 0;
     for (let i = 0; i < totalPixels; i++) {
       const alpha = data[i * channels + 3];
-      if (alpha >= 254) fullyOpaque++;
-      else if (alpha <= 1) fullyTransparent++;
+      if (alpha >= 240) fullyOpaque++;
+      else if (alpha <= 16) fullyTransparent++;
     }
     const transparentRatio = fullyTransparent / totalPixels;
     const opaqueRatio = fullyOpaque / totalPixels;
     return transparentRatio > 0.02 && opaqueRatio < 0.98;
+  }
+
+  private defringeAlpha(data: Buffer, info: sharp.OutputInfo): Buffer {
+    const channels = info.channels;
+    const total = info.width * info.height;
+    const width = info.width;
+    const height = info.height;
+
+    for (let i = 0; i < total; i++) {
+      const offset = i * channels;
+      if (data[offset + 3] <= 16) {
+        data[offset + 3] = 0;
+        continue;
+      }
+
+      if (data[offset + 3] < 128) {
+        data[offset + 3] = 0;
+        continue;
+      }
+
+      const x = i % width;
+      const y = Math.floor(i / width);
+      let transparentNeighbors = 0;
+      let totalNeighbors = 0;
+
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const ny = y + dy;
+          const nx = x + dx;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          totalNeighbors++;
+          const neighborAlpha = data[(ny * width + nx) * channels + 3];
+          if (neighborAlpha <= 16) transparentNeighbors++;
+        }
+      }
+
+      if (totalNeighbors > 0 && transparentNeighbors / totalNeighbors >= 0.5) {
+        data[offset + 3] = 0;
+      }
+    }
+
+    return data;
   }
 
   private estimateBackgroundFromEdges(data: Buffer, info: sharp.OutputInfo): { r: number; g: number; b: number } {
