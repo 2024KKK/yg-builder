@@ -698,7 +698,7 @@ function ProjectPage(props: {
   }
 
   function applyTemplate(template: StyleTemplate): void {
-    setDraft({ ...draft, styleDescription: template.description });
+    setDraft({ ...draft, style: template.name, styleDescription: template.description });
   }
 
   return (
@@ -1520,6 +1520,14 @@ function SettingsPage(props: {
   );
 }
 
+function selectPreviewFile(asset: Asset): string | undefined {
+  const pngFiles = asset.files.filter((file) => file.toLowerCase().endsWith(".png"));
+  if (asset.type === "character") {
+    return asset.sheetPath ?? pngFiles.find((file) => file.includes("source_sheet")) ?? pngFiles[0];
+  }
+  return pngFiles[0] ?? asset.atlasPath;
+}
+
 function AssetCard(props: {
   project: Project;
   asset: Asset;
@@ -1528,14 +1536,16 @@ function AssetCard(props: {
   onDelete?: () => Promise<void>;
 }): JSX.Element {
   const { t } = useTranslation();
-  const pngFile = props.asset.files.find((file) => file.endsWith(".png"));
+  const pngFile = selectPreviewFile(props.asset);
   const [dataUrl, setDataUrl] = useState("");
 
   useEffect(() => {
     let alive = true;
+    setDataUrl("");
     if (pngFile) {
       window.topspeedBuilder.readImageDataUrl(props.project.path, pngFile).then((result) => {
         if (alive && result.ok && result.data) setDataUrl(result.data);
+        if (alive && (!result.ok || !result.data)) setDataUrl("");
       });
     }
     return () => {
