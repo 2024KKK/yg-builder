@@ -41,6 +41,26 @@ interface FrameDiagnostic {
   warnings: string[];
 }
 
+interface CharacterSheetGrid {
+  columns: number;
+  rows: number;
+  transparentBackground: boolean;
+}
+
+interface SheetCropRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+interface FloatRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 export class GenerationService {
   constructor(
     private readonly settingsService: SettingsService,
@@ -76,6 +96,7 @@ export class GenerationService {
     const logs: string[] = [];
     const runId = randomUUID();
     const assetName = sanitizeFileName(input.name || "icons");
+    const storageName = this.storageName(assetName, runId);
     const size = parseSize(input.size);
     const itemNames = this.resolveIconNames(input);
     const outputDirectory = input.assetType === "ui" ? "icons/ui" : "icons/items";
@@ -91,7 +112,7 @@ export class GenerationService {
       const itemSlug = sanitizeFileName(itemName);
       const fileName = `${input.assetType}_${itemSlug}_${String(index).padStart(2, "0")}.png`;
       const rawPath = path.join(project.path, "generated", "raw", runId, fileName);
-      const processedPath = path.join(project.path, outputDirectory, fileName);
+      const processedPath = path.join(project.path, outputDirectory, storageName, fileName);
       const prompt = this.aiService.buildPrompt({
         assetType: this.assetTypeLabel(input.assetType),
         name: itemName,
@@ -99,7 +120,11 @@ export class GenerationService {
         style: this.buildStylePrompt(project, input),
         size: input.size,
         transparentBackground: input.transparentBackground,
-        extra: ["单个居中图标。正交视角的游戏背包素材。与同批次保持一致色板。", referenceGuidance]
+        extra: [
+          "单个居中图标。正交视角的游戏背包素材。与同批次保持一致色板。",
+          this.buildSingleSubjectGuidance(input),
+          referenceGuidance
+        ]
           .filter(Boolean)
           .join(" ")
       });
@@ -115,7 +140,8 @@ export class GenerationService {
           width: size.width,
           height: size.height,
           transparentBackground: input.transparentBackground,
-          trim: true
+          trim: true,
+          isolateSubject: input.assetType !== "ui"
         });
         logs.push(`保存处理图像: ${processedPath}`);
 
@@ -135,7 +161,7 @@ export class GenerationService {
     if (input.makeAtlas && absoluteFiles.length > 0) {
       const atlas = await this.atlasService.pack({
         projectPath: project.path,
-        name: assetName,
+        name: storageName,
         files: absoluteFiles
       });
       atlasPath = atlas.atlasPath;
@@ -143,7 +169,7 @@ export class GenerationService {
       logs.push(`生成图集: ${path.join(project.path, atlasPath)}`);
     }
 
-    const metadataPath = path.join(project.path, outputDirectory, `${assetName}_metadata.json`);
+    const metadataPath = path.join(project.path, outputDirectory, storageName, `${storageName}_metadata.json`);
     const metadata = {
       name: input.name,
       type: input.assetType,
@@ -184,6 +210,7 @@ export class GenerationService {
     const logs: string[] = [];
     const runId = randomUUID();
     const assetName = sanitizeFileName(input.name || "character");
+    const storageName = this.storageName(assetName, runId);
     const frameSize = parseSize(input.size);
     const animations = input.animations.length
       ? input.animations
@@ -220,9 +247,9 @@ export class GenerationService {
 
     for (let versionIndex = 0; versionIndex < versionCount; versionIndex += 1) {
       const versionLabel = `v${String(versionIndex + 1).padStart(2, "0")}`;
-      const versionOutputName = versionCount > 1 ? `${assetName}_${versionLabel}` : assetName;
-      const versionDirectory = path.join(project.path, "sprites", "characters", assetName, versionLabel);
-      const sourceSheetName = `character_${assetName}_${versionLabel}_source_sheet.png`;
+      const versionOutputName = versionCount > 1 ? `${storageName}_${versionLabel}` : storageName;
+      const versionDirectory = path.join(project.path, "sprites", "characters", storageName, versionLabel);
+      const sourceSheetName = `character_${storageName}_${versionLabel}_source_sheet.png`;
       const rawPath = path.join(project.path, "generated", "raw", runId, sourceSheetName);
       const sourceSheetPath = path.join(versionDirectory, sourceSheetName);
 
@@ -245,7 +272,11 @@ export class GenerationService {
 
       try {
         const image = await this.generateWithRetry(prompt, sheetSizeText, input.transparentBackground, input, resolvedReferences, maskImagePath);
-        const normalizedSheet = await this.normalizeCharacterSheet(image, sheetSize);
+        const normalizedSheet = await this.normalizeCharacterSheet(image, sheetSize, {
+          columns,
+          rows,
+          transparentBackground: input.transparentBackground
+        });
         await fs.ensureDir(path.dirname(rawPath));
         await fs.writeFile(rawPath, image);
         await fs.ensureDir(path.dirname(sourceSheetPath));
@@ -253,13 +284,19 @@ export class GenerationService {
         sourceSheets.push(toRelative(project.path, sourceSheetPath));
         logs.push(`生成角色动作表: ${sourceSheetPath}`);
 
-        const versionFrames: GeneratedFrame[] = [];
+        const extractedFrames: Array<{
+          animation: GenerateAssetInput["animations"][number];
+          frameIndex: number;
+          fileName: string;
+          processedPath: string;
+          buffer: Buffer;
+        }> = [];
         for (let rowIndex = 0; rowIndex < animations.length; rowIndex += 1) {
           const animation = animations[rowIndex];
           for (let frameIndex = 0; frameIndex < animation.frames; frameIndex += 1) {
-            const fileName = `character_${assetName}_${versionLabel}_${animation.name}_${String(frameIndex).padStart(2, "0")}.png`;
+            const fileName = `character_${storageName}_${versionLabel}_${animation.name}_${String(frameIndex).padStart(2, "0")}.png`;
             const processedPath = path.join(versionDirectory, fileName);
-            const frameBuffer = await this.extractCharacterFrame(image, {
+            const frameBuffer = await this.extractCharacterFrame(normalizedSheet, {
               columns,
               rows,
               rowIndex,
@@ -267,31 +304,50 @@ export class GenerationService {
               frameSize
             });
 
-            await this.imageService.saveProcessedImage(frameBuffer, processedPath, {
-              width: frameSize.width,
-              height: frameSize.height,
-              transparentBackground: input.transparentBackground,
-              trim: true,
-              anchor: "bottom-center",
-              padding: 2,
-              removeEdgeArtifacts: true
+            extractedFrames.push({
+              animation,
+              frameIndex,
+              fileName,
+              processedPath,
+              buffer: frameBuffer
             });
 
-            const frame: GeneratedFrame = {
-              absolutePath: processedPath,
-              relativePath: toRelative(project.path, processedPath),
-              name: fileName,
-              animation: animation.name,
-              frameIndex
-            };
-            frames.push(frame);
-            versionFrames.push(frame);
+          }
+        }
 
-            const diagnostic = await this.inspectCharacterFrame(processedPath, frameSize);
-            diagnostics.push({ ...diagnostic, file: frame.relativePath });
-            if (diagnostic.warnings.length > 0) {
-              logs.push(`角色帧诊断 ${frame.relativePath}: ${diagnostic.warnings.join("；")}`);
-            }
+        const processedFrameBuffers = await this.imageService.normalizeFramesConsistently(
+          extractedFrames.map((frame) => frame.buffer),
+          {
+            width: frameSize.width,
+            height: frameSize.height,
+            transparentBackground: input.transparentBackground,
+            trim: false,
+            anchor: "center",
+            padding: 0,
+            removeEdgeArtifacts: true
+          }
+        );
+
+        const versionFrames: GeneratedFrame[] = [];
+        for (let index = 0; index < extractedFrames.length; index += 1) {
+          const extractedFrame = extractedFrames[index];
+          await fs.ensureDir(path.dirname(extractedFrame.processedPath));
+          await fs.writeFile(extractedFrame.processedPath, processedFrameBuffers[index]);
+
+          const frame: GeneratedFrame = {
+            absolutePath: extractedFrame.processedPath,
+            relativePath: toRelative(project.path, extractedFrame.processedPath),
+            name: extractedFrame.fileName,
+            animation: extractedFrame.animation.name,
+            frameIndex: extractedFrame.frameIndex
+          };
+          frames.push(frame);
+          versionFrames.push(frame);
+
+          const diagnostic = await this.inspectCharacterFrame(extractedFrame.processedPath, frameSize);
+          diagnostics.push({ ...diagnostic, file: frame.relativePath });
+          if (diagnostic.warnings.length > 0) {
+            logs.push(`角色帧诊断 ${frame.relativePath}: ${diagnostic.warnings.join("；")}`);
           }
         }
 
@@ -323,7 +379,7 @@ export class GenerationService {
 
     const sheetPath = sheetPaths[0];
     const files = frames.map((frame) => frame.relativePath);
-    const metadataPath = path.join(project.path, "sprites", "characters", assetName, `${assetName}_metadata.json`);
+    const metadataPath = path.join(project.path, "sprites", "characters", storageName, `${storageName}_metadata.json`);
     await writeJsonFile(metadataPath, {
       name: input.name,
       type: "character",
@@ -393,6 +449,8 @@ export class GenerationService {
       "请生成一张完整的角色动作表，不要生成单张角色插图。",
       `固定网格布局为 ${columns} 列 x ${rows} 行，每个格子是一帧。`,
       rowPlan,
+      this.buildAnimationContinuityGuidance(animations),
+      "整张图必须是清晰的游戏精灵动作表：每格边界在构图上严格等宽等高，但不要画可见网格线。",
       "Keep 15-20% transparent safe padding inside every cell; no body part, weapon, cape, projectile, or magic effect may touch or cross a cell edge.",
       "If the provider canvas is not exactly the grid aspect ratio, keep the whole grid centered with equal transparent outer margins and mathematically even rows and columns.",
       `角色视角：${this.characterViewLabel(input.characterView)}。`,
@@ -405,9 +463,40 @@ export class GenerationService {
       .join(" ");
   }
 
-  private async normalizeCharacterSheet(input: Buffer, size: { width: number; height: number }): Promise<Buffer> {
-    return sharp(input)
-      .ensureAlpha()
+  private buildAnimationContinuityGuidance(animations: GenerateAssetInput["animations"]): string {
+    const rowRules = animations.map((animation) => {
+      const name = animation.name.toLowerCase();
+      if (name.includes("走") || name.includes("walk") || name.includes("run") || name.includes("跑")) {
+        return `${animation.name} 行必须是连续步行动画：从左到右依次为左脚接触、过渡、右脚接触、过渡；双脚和武器位置必须逐帧推进，不要每帧都保持同一只脚在前。`;
+      }
+      if (name.includes("攻") || name.includes("attack") || name.includes("slash") || name.includes("hit")) {
+        return `${animation.name} 行必须是连续攻击动画：从左到右依次为蓄力、挥出、命中/最大伸展、收招；武器轨迹必须逐帧推进，不要生成互不相干的姿势。`;
+      }
+      if (name.includes("待") || name.includes("idle")) {
+        return `${animation.name} 行必须是连续待机循环：只做轻微呼吸、重心或手臂变化，不要突然改变体型、朝向或装备。`;
+      }
+      return `${animation.name} 行必须表现同一个动作时间线的连续关键帧，相邻帧只做渐进变化。`;
+    });
+
+    return [
+      "动画连续性硬约束：每一行都是同一动作的时间序列，不是独立姿势合集。",
+      "同一行从左到右必须能直接播放成循环或一次性动作；角色朝向、身高、脚底基线、装备和轮廓比例保持一致。",
+      ...rowRules
+    ].join(" ");
+  }
+
+  private async normalizeCharacterSheet(input: Buffer, size: { width: number; height: number }, grid: CharacterSheetGrid): Promise<Buffer> {
+    const sheet = grid.transparentBackground
+      ? await this.imageService.removeBackground(input)
+      : await sharp(input).ensureAlpha().png().toBuffer();
+    const crop = await this.detectCharacterSheetCrop(sheet, grid.columns, grid.rows);
+    let pipeline = sharp(sheet).ensureAlpha();
+
+    if (crop) {
+      pipeline = pipeline.extract(crop);
+    }
+
+    return pipeline
       .resize({
         width: size.width,
         height: size.height,
@@ -416,6 +505,213 @@ export class GenerationService {
       })
       .png()
       .toBuffer();
+  }
+
+  private async detectCharacterSheetCrop(sheet: Buffer, columns: number, rows: number): Promise<SheetCropRect | undefined> {
+    const { data, info } = await sharp(sheet).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const channels = info.channels;
+    const totalPixels = info.width * info.height;
+    const xWeights = new Float64Array(info.width);
+    const yWeights = new Float64Array(info.height);
+    let foregroundPixels = 0;
+    let minX = info.width;
+    let minY = info.height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let index = 0; index < totalPixels; index += 1) {
+      const alpha = data[index * channels + 3];
+      if (alpha <= 12) continue;
+
+      const x = index % info.width;
+      const y = Math.floor(index / info.width);
+      xWeights[x] += 1;
+      yWeights[y] += 1;
+      foregroundPixels += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+
+    const minimumForegroundPixels = Math.max(32, Math.floor(totalPixels * 0.002));
+    if (foregroundPixels < minimumForegroundPixels || maxX < minX || maxY < minY) {
+      return undefined;
+    }
+
+    const safeColumns = Math.max(1, columns);
+    const safeRows = Math.max(1, rows);
+    const xBounds = this.inferGridAxisBounds(xWeights, safeColumns, minX, maxX);
+    const yBounds = this.inferGridAxisBounds(yWeights, safeRows, minY, maxY);
+    const targetAspect = safeColumns / safeRows;
+    const rect = this.expandRectToAspect({
+      left: xBounds?.start ?? minX,
+      top: yBounds?.start ?? minY,
+      right: xBounds?.end ?? maxX + 1,
+      bottom: yBounds?.end ?? maxY + 1
+    }, targetAspect, info.width, info.height);
+
+    return this.toIntegerCropRect(rect, info.width, info.height);
+  }
+
+  private inferGridAxisBounds(weights: Float64Array, expectedCells: number, foregroundMin: number, foregroundMax: number): { start: number; end: number } | undefined {
+    const clusters = this.weightedKMeans1D(weights, expectedCells, foregroundMin, foregroundMax);
+    if (!clusters) return undefined;
+
+    const meaningfulWeight = Math.max(1, clusters.totalWeight / Math.max(expectedCells * 12, 1));
+    const meaningfulClusters = clusters.totals.filter((weight) => weight >= meaningfulWeight).length;
+    if (meaningfulClusters < expectedCells) {
+      return undefined;
+    }
+
+    const gaps: number[] = [];
+    for (let index = 1; index < clusters.centers.length; index += 1) {
+      gaps.push(clusters.centers[index] - clusters.centers[index - 1]);
+    }
+
+    const medianGap = this.median(gaps);
+    if (!medianGap || medianGap <= 0) {
+      return undefined;
+    }
+
+    const hasUnstableGap = gaps.some((gap) => gap < medianGap * 0.45 || gap > medianGap * 1.8);
+    if (hasUnstableGap) {
+      return undefined;
+    }
+
+    const start = Math.min(clusters.centers[0] - medianGap / 2, foregroundMin);
+    const end = Math.max(clusters.centers[clusters.centers.length - 1] + medianGap / 2, foregroundMax + 1);
+    return { start, end };
+  }
+
+  private weightedKMeans1D(
+    weights: Float64Array,
+    expectedClusters: number,
+    min: number,
+    max: number
+  ): { centers: number[]; totals: number[]; totalWeight: number } | undefined {
+    if (expectedClusters <= 0 || max < min) return undefined;
+
+    let totalWeight = 0;
+    for (let value = min; value <= max; value += 1) {
+      totalWeight += weights[value];
+    }
+    if (totalWeight <= 0) return undefined;
+
+    const span = max - min + 1;
+    const centers = Array.from({ length: expectedClusters }, (_, index) => min + ((index + 0.5) * span) / expectedClusters);
+
+    for (let iteration = 0; iteration < 30; iteration += 1) {
+      const sums = new Array<number>(expectedClusters).fill(0);
+      const totals = new Array<number>(expectedClusters).fill(0);
+
+      for (let value = min; value <= max; value += 1) {
+        const weight = weights[value];
+        if (weight <= 0) continue;
+        const clusterIndex = this.closestCenterIndex(value, centers);
+        sums[clusterIndex] += value * weight;
+        totals[clusterIndex] += weight;
+      }
+
+      let changed = false;
+      for (let index = 0; index < expectedClusters; index += 1) {
+        if (totals[index] <= 0) continue;
+        const nextCenter = sums[index] / totals[index];
+        if (Math.abs(nextCenter - centers[index]) > 0.25) {
+          changed = true;
+        }
+        centers[index] = nextCenter;
+      }
+      centers.sort((a, b) => a - b);
+      if (!changed) break;
+    }
+
+    const finalTotals = new Array<number>(expectedClusters).fill(0);
+    for (let value = min; value <= max; value += 1) {
+      const weight = weights[value];
+      if (weight <= 0) continue;
+      finalTotals[this.closestCenterIndex(value, centers)] += weight;
+    }
+
+    return { centers, totals: finalTotals, totalWeight };
+  }
+
+  private closestCenterIndex(value: number, centers: number[]): number {
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < centers.length; index += 1) {
+      const distance = Math.abs(value - centers[index]);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  private median(values: number[]): number | undefined {
+    if (values.length === 0) return undefined;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
+  private expandRectToAspect(rect: FloatRect, aspect: number, imageWidth: number, imageHeight: number): FloatRect {
+    let { left, top, right, bottom } = rect;
+    const width = Math.max(1, right - left);
+    const height = Math.max(1, bottom - top);
+
+    if (width / height < aspect) {
+      const targetWidth = height * aspect;
+      const offset = (targetWidth - width) / 2;
+      left -= offset;
+      right += offset;
+    } else {
+      const targetHeight = width / aspect;
+      const offset = (targetHeight - height) / 2;
+      top -= offset;
+      bottom += offset;
+    }
+
+    if (left < 0) {
+      right -= left;
+      left = 0;
+    }
+    if (top < 0) {
+      bottom -= top;
+      top = 0;
+    }
+    if (right > imageWidth) {
+      left -= right - imageWidth;
+      right = imageWidth;
+    }
+    if (bottom > imageHeight) {
+      top -= bottom - imageHeight;
+      bottom = imageHeight;
+    }
+
+    return {
+      left: Math.max(0, left),
+      top: Math.max(0, top),
+      right: Math.min(imageWidth, right),
+      bottom: Math.min(imageHeight, bottom)
+    };
+  }
+
+  private toIntegerCropRect(rect: FloatRect, imageWidth: number, imageHeight: number): SheetCropRect | undefined {
+    const left = Math.max(0, Math.min(imageWidth - 1, Math.floor(rect.left)));
+    const top = Math.max(0, Math.min(imageHeight - 1, Math.floor(rect.top)));
+    const right = Math.max(left + 1, Math.min(imageWidth, Math.ceil(rect.right)));
+    const bottom = Math.max(top + 1, Math.min(imageHeight, Math.ceil(rect.bottom)));
+    const width = right - left;
+    const height = bottom - top;
+
+    if (width < 2 || height < 2) {
+      return undefined;
+    }
+
+    return { left, top, width, height };
   }
 
   private async extractCharacterFrame(
@@ -433,11 +729,10 @@ export class GenerationService {
     const height = metadata.height ?? args.frameSize.height * args.rows;
     const cellWidth = width / args.columns;
     const cellHeight = height / args.rows;
-    const bleed = Math.round(Math.min(cellWidth, cellHeight) * 0.04);
-    const left = Math.max(0, Math.floor(args.frameIndex * cellWidth - bleed));
-    const top = Math.max(0, Math.floor(args.rowIndex * cellHeight - bleed));
-    const right = Math.min(width, Math.ceil((args.frameIndex + 1) * cellWidth + bleed));
-    const bottom = Math.min(height, Math.ceil((args.rowIndex + 1) * cellHeight + bleed));
+    const left = Math.max(0, Math.floor(args.frameIndex * cellWidth));
+    const top = Math.max(0, Math.floor(args.rowIndex * cellHeight));
+    const right = Math.min(width, Math.ceil((args.frameIndex + 1) * cellWidth));
+    const bottom = Math.min(height, Math.ceil((args.rowIndex + 1) * cellHeight));
 
     return sharp(sheet)
       .ensureAlpha()
@@ -553,6 +848,7 @@ export class GenerationService {
     const logs: string[] = [];
     const runId = randomUUID();
     const assetName = sanitizeFileName(input.name || input.tileTheme || "瓦片集");
+    const storageName = this.storageName(assetName, runId);
     const size = parseSize(input.size);
     const tileTypes = input.tileTypes.length ? input.tileTypes : ["地板", "墙体", "转角", "边缘", "门", "水面"];
     const tiles: Array<{ filePath: string; type: string }> = [];
@@ -565,9 +861,9 @@ export class GenerationService {
     for (let index = 0; index < tileTypes.length; index += 1) {
       const tileType = tileTypes[index];
       const tileSlug = sanitizeFileName(tileType);
-      const fileName = `tileset_${assetName}_${tileSlug}_${String(index).padStart(2, "0")}.png`;
+      const fileName = `tileset_${storageName}_${tileSlug}_${String(index).padStart(2, "0")}.png`;
       const rawPath = path.join(project.path, "generated", "raw", runId, fileName);
-      const processedPath = path.join(project.path, "tilesets", assetName, fileName);
+      const processedPath = path.join(project.path, "tilesets", storageName, fileName);
       const prompt = this.aiService.buildPrompt({
         assetType: "瓦片集瓦片",
         name: tileType,
@@ -609,7 +905,7 @@ export class GenerationService {
 
     const tileset = await this.tileSetService.composeTileSet({
       projectPath: project.path,
-      name: assetName,
+      name: storageName,
       tiles,
       size: input.size,
       theme: input.tileTheme,
@@ -650,6 +946,7 @@ export class GenerationService {
     const logs: string[] = [];
     const runId = randomUUID();
     const assetName = sanitizeFileName(input.name || input.assetType);
+    const storageName = this.storageName(assetName, runId);
     const size = parseSize(input.size);
     const files: string[] = [];
     const absoluteFiles: string[] = [];
@@ -661,7 +958,7 @@ export class GenerationService {
     for (let index = 0; index < Math.max(input.count, 1); index += 1) {
       const fileName = `${input.assetType}_${assetName}_${String(index).padStart(2, "0")}.png`;
       const rawPath = path.join(project.path, "generated", "raw", runId, fileName);
-      const processedPath = path.join(project.path, "generated", "processed", assetName, fileName);
+      const processedPath = path.join(project.path, "generated", "processed", storageName, fileName);
       const prompt = this.aiService.buildPrompt({
         assetType: this.assetTypeLabel(input.assetType),
         name: input.name,
@@ -669,7 +966,7 @@ export class GenerationService {
         style: this.buildStylePrompt(project, input),
         size: input.size,
         transparentBackground: input.transparentBackground,
-        extra: ["可直接复用的游戏二维素材。", referenceGuidance].filter(Boolean).join(" ")
+        extra: ["可直接复用的游戏二维素材。", this.buildSingleSubjectGuidance(input), referenceGuidance].filter(Boolean).join(" ")
       });
       prompts.push(prompt);
 
@@ -681,7 +978,8 @@ export class GenerationService {
           width: size.width,
           height: size.height,
           transparentBackground: input.transparentBackground,
-          trim: true
+          trim: true,
+          isolateSubject: this.shouldIsolateSingleSubject(input)
         });
         files.push(toRelative(project.path, processedPath));
         absoluteFiles.push(processedPath);
@@ -699,14 +997,14 @@ export class GenerationService {
     if (input.makeAtlas && absoluteFiles.length > 1) {
       const atlas = await this.atlasService.pack({
         projectPath: project.path,
-        name: assetName,
+        name: storageName,
         files: absoluteFiles
       });
       atlasPath = atlas.atlasPath;
       logs.push(`生成图集: ${path.join(project.path, atlasPath)}`);
     }
 
-    const metadataPath = path.join(project.path, "generated", "processed", assetName, `${assetName}_metadata.json`);
+    const metadataPath = path.join(project.path, "generated", "processed", storageName, `${storageName}_metadata.json`);
     await writeJsonFile(metadataPath, {
       name: input.name,
       type: input.assetType,
@@ -806,6 +1104,10 @@ export class GenerationService {
     }
 
     return Array.from({ length: Math.max(input.count, 1) }, (_, index) => `${input.name || "icon"} ${index + 1}`);
+  }
+
+  private storageName(assetName: string, runId: string): string {
+    return `${assetName}_${runId.slice(0, 8)}`;
   }
 
   private isRateLimitError(error: unknown): boolean {
@@ -1051,14 +1353,50 @@ export class GenerationService {
     }
   }
 
+  private buildSingleSubjectGuidance(input: GenerateAssetInput): string {
+    if (!this.shouldIsolateSingleSubject(input)) {
+      return "";
+    }
+
+    return [
+      "单主体硬约束：画面只能有一个完整主体，居中，占据主要区域。",
+      "不要生成多个候选、大小对比版本、进化形态、变体展示、同屏多个生物或多个道具。",
+      "不要画背景、地面、投影、边框、文字、标签或参考小图。",
+      "如果需要精英变体细节，把细节合并到同一个主体上，不要额外画第二个怪物。"
+    ].join(" ");
+  }
+
+  private shouldIsolateSingleSubject(input: GenerateAssetInput): boolean {
+    return input.assetType === "enemy" || input.assetType === "icon" || input.assetType === "item";
+  }
+
   private buildStylePrompt(project: Project, input: GenerateAssetInput): string {
     const detailPrompt = this.resolveDetailPrompt(input);
-    const projectStyleParts = this.uniqueNonEmpty([project.style, project.styleDescription]);
+    const styleName = project.style.trim();
+    const styleDescription = project.styleDescription.trim();
     const parts = [
-      ...projectStyleParts.map((part) => `项目风格：${part}`),
+      styleName ? `主要美术风格：${styleName}` : "",
+      styleDescription && styleDescription !== styleName ? `风格说明：${styleDescription}` : "",
+      this.buildStyleHardConstraints(project, input),
       detailPrompt ? `对象细节：${detailPrompt}` : ""
     ];
     return parts.filter(Boolean).join("\n");
+  }
+
+  private buildStyleHardConstraints(project: Project, input: GenerateAssetInput): string {
+    const styleText = `${project.style} ${project.styleDescription}`.toLowerCase();
+    const constraints: string[] = [];
+
+    if (styleText.includes("像素") || styleText.includes("pixel") || styleText.includes("16-bit") || styleText.includes("16bit")) {
+      constraints.push(
+        "严格像素美术硬约束：低分辨率游戏精灵、硬边方块像素、清晰像素轮廓、有限色板、无抗锯齿、无写实绘画、无3D渲染、无照片质感、无柔焦阴影。"
+      );
+      if (input.assetType === "character") {
+        constraints.push("角色必须像可直接放入 2D 游戏的 16-bit 角色 sprite，不要生成写实怪物插画或概念图。");
+      }
+    }
+
+    return constraints.join("\n");
   }
 
   private resolveAssetStyle(project: Project, input: GenerateAssetInput): string {
@@ -1105,21 +1443,4 @@ export class GenerationService {
     return (input.detailPrompt || legacyStyle || "").trim();
   }
 
-  private uniqueNonEmpty(values: Array<string | undefined>): string[] {
-    const seen = new Set<string>();
-    const result: string[] = [];
-
-    for (const value of values) {
-      const normalized = value?.trim();
-      if (!normalized) continue;
-
-      const key = normalized.toLowerCase();
-      if (seen.has(key)) continue;
-
-      seen.add(key);
-      result.push(normalized);
-    }
-
-    return result;
-  }
 }

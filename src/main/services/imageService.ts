@@ -11,28 +11,29 @@ interface ProcessImageOptions {
   anchor?: "center" | "bottom-center";
   padding?: number;
   removeEdgeArtifacts?: boolean;
+  isolateSubject?: boolean;
+}
+
+interface AlphaBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+  alphaPixels: number;
 }
 
 export class ImageProcessingService {
   async processImage(input: Buffer, options: ProcessImageOptions): Promise<Buffer> {
-    let output = input;
-
-    if (options.transparentBackground) {
-      output = await this.removeFlatBackground(output);
-    } else {
-      output = await sharp(output).ensureAlpha().png().toBuffer();
-    }
-
-    if (options.removeEdgeArtifacts) {
-      output = await this.removeEdgeArtifacts(output);
-    }
+    let output = await this.prepareForeground(input, options);
 
     if (options.trim) {
       output = await this.trimTransparent(output);
     }
 
     output = await this.normalizeCanvas(output, { width: options.width, height: options.height }, options.anchor ?? "center", options.padding ?? 0);
-    return output;
+    return this.ensureNotBlank(output, input, options);
   }
 
   async saveProcessedImage(input: Buffer, outputPath: string, options: ProcessImageOptions): Promise<void> {
@@ -41,11 +42,83 @@ export class ImageProcessingService {
     await fs.writeFile(outputPath, processed);
   }
 
+  async removeBackground(input: Buffer): Promise<Buffer> {
+    return this.removeFlatBackground(input);
+  }
+
+  async normalizeFramesConsistently(inputs: Buffer[], options: ProcessImageOptions): Promise<Buffer[]> {
+    const prepared = await Promise.all(inputs.map((input) => this.prepareForeground(input, options)));
+    if (!options.trim) {
+      const normalized = await Promise.all(
+        prepared.map((frame) => this.normalizeCanvas(frame, { width: options.width, height: options.height }, options.anchor ?? "center", options.padding ?? 0))
+      );
+      return Promise.all(normalized.map((frame, index) => this.ensureNotBlank(frame, inputs[index], options)));
+    }
+
+    const bounds = await Promise.all(prepared.map((frame) => this.getAlphaBounds(frame)));
+    const nonEmptyBounds = bounds.filter((box): box is AlphaBounds => Boolean(box));
+
+    if (nonEmptyBounds.length === 0) {
+      return Promise.all(inputs.map((input) => this.processImage(input, options)));
+    }
+
+    const safePadding = Math.max(0, Math.min(options.padding ?? 0, Math.floor(Math.min(options.width, options.height) / 4)));
+    const targetWidth = Math.max(1, options.width - safePadding * 2);
+    const targetHeight = Math.max(1, options.height - safePadding * 2);
+    const maxContentWidth = Math.max(...nonEmptyBounds.map((box) => box.width), 1);
+    const maxContentHeight = Math.max(...nonEmptyBounds.map((box) => box.height), 1);
+    const scale = Math.min(targetWidth / maxContentWidth, targetHeight / maxContentHeight);
+
+    const normalized = await Promise.all(prepared.map(async (frame, index) => {
+      const box = bounds[index];
+      if (!box) {
+        return this.normalizeCanvas(frame, { width: options.width, height: options.height }, options.anchor ?? "center", safePadding);
+      }
+
+      const content = await sharp(frame)
+        .ensureAlpha()
+        .extract({
+          left: box.minX,
+          top: box.minY,
+          width: box.width,
+          height: box.height
+        })
+        .resize({
+          width: Math.max(1, Math.round(box.width * scale)),
+          height: Math.max(1, Math.round(box.height * scale)),
+          fit: "fill",
+          kernel: sharp.kernel.nearest
+        })
+        .png()
+        .toBuffer();
+
+      return this.placeOnCanvas(content, { width: options.width, height: options.height }, options.anchor ?? "center", safePadding);
+    }));
+
+    return Promise.all(normalized.map((frame, index) => this.ensureNotBlank(frame, inputs[index], options)));
+  }
+
   async normalizeFile(inputPath: string, outputPath: string, size: Size): Promise<void> {
     const buffer = await fs.readFile(inputPath);
     const processed = await this.normalizeCanvas(buffer, size);
     await fs.ensureDir(path.dirname(outputPath));
     await fs.writeFile(outputPath, processed);
+  }
+
+  private async prepareForeground(input: Buffer, options: Pick<ProcessImageOptions, "transparentBackground" | "removeEdgeArtifacts" | "isolateSubject">): Promise<Buffer> {
+    let output = options.transparentBackground
+      ? await this.removeFlatBackground(input)
+      : await sharp(input).ensureAlpha().png().toBuffer();
+
+    if (options.removeEdgeArtifacts) {
+      output = await this.removeEdgeArtifacts(output);
+    }
+
+    if (options.isolateSubject) {
+      output = await this.keepLargestAlphaComponent(output);
+    }
+
+    return output;
   }
 
   private async removeFlatBackground(input: Buffer): Promise<Buffer> {
@@ -63,7 +136,7 @@ export class ImageProcessingService {
 
     const background = this.estimateBackgroundFromEdges(data, info);
     const tolerance = this.computeAdaptiveTolerance(data, info, background, channels);
-    const toRemove = new Uint8Array(data.length / channels);
+    const backgroundCandidates = new Uint8Array(data.length / channels);
 
     for (let i = 0; i < data.length; i += channels) {
       const index = i / channels;
@@ -74,16 +147,24 @@ export class ImageProcessingService {
       );
 
       if (distance <= tolerance || data[i + 3] < 8) {
-        toRemove[index] = 1;
+        backgroundCandidates[index] = 1;
       }
     }
 
-    this.cleanupStrayPixels(toRemove, info.width, info.height);
+    const toRemove = this.edgeConnectedMask(backgroundCandidates, info.width, info.height);
+    let remainingPixels = 0;
 
     for (let i = 0; i < data.length; i += channels) {
       if (toRemove[i / channels]) {
         data[i + 3] = 0;
+      } else if (data[i + 3] >= 8) {
+        remainingPixels += 1;
       }
+    }
+
+    const minimumForegroundPixels = Math.max(16, Math.floor((info.width * info.height) * 0.001));
+    if (remainingPixels < minimumForegroundPixels) {
+      return sharp(input).ensureAlpha().png().toBuffer();
     }
 
     return sharp(data, {
@@ -237,6 +318,39 @@ export class ImageProcessingService {
     }
   }
 
+  private edgeConnectedMask(mask: Uint8Array, width: number, height: number): Uint8Array {
+    const total = width * height;
+    const connected = new Uint8Array(total);
+    const stack: number[] = [];
+
+    const push = (index: number): void => {
+      if (index < 0 || index >= total || !mask[index] || connected[index]) return;
+      connected[index] = 1;
+      stack.push(index);
+    };
+
+    for (let x = 0; x < width; x += 1) {
+      push(x);
+      push((height - 1) * width + x);
+    }
+
+    for (let y = 1; y < height - 1; y += 1) {
+      push(y * width);
+      push(y * width + width - 1);
+    }
+
+    while (stack.length > 0) {
+      const index = stack.pop() as number;
+      const x = index % width;
+      if (x > 0) push(index - 1);
+      if (x < width - 1) push(index + 1);
+      if (index >= width) push(index - width);
+      if (index < total - width) push(index + width);
+    }
+
+    return connected;
+  }
+
   private async trimTransparent(input: Buffer): Promise<Buffer> {
     try {
       return await sharp(input)
@@ -258,6 +372,7 @@ export class ImageProcessingService {
     const visited = new Uint8Array(total);
     const remove = new Uint8Array(total);
     const minArtifactArea = Math.max(64, Math.floor(total * 0.035));
+    const minStrayArea = Math.max(4, Math.floor(total * 0.00035));
 
     for (let start = 0; start < total; start += 1) {
       if (visited[start] || data[start * channels + 3] <= 12) {
@@ -294,7 +409,7 @@ export class ImageProcessingService {
         }
       }
 
-      if (touchesEdge && component.length < minArtifactArea) {
+      if ((touchesEdge && component.length < minArtifactArea) || component.length < minStrayArea) {
         for (const index of component) {
           remove[index] = 1;
         }
@@ -318,6 +433,125 @@ export class ImageProcessingService {
       .toBuffer();
   }
 
+  private async keepLargestAlphaComponent(input: Buffer): Promise<Buffer> {
+    const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const channels = info.channels;
+    const total = info.width * info.height;
+    const visited = new Uint8Array(total);
+    let bestComponent: number[] = [];
+
+    for (let start = 0; start < total; start += 1) {
+      if (visited[start] || data[start * channels + 3] <= 12) {
+        continue;
+      }
+
+      const stack = [start];
+      const component: number[] = [];
+      visited[start] = 1;
+
+      while (stack.length > 0) {
+        const index = stack.pop() as number;
+        component.push(index);
+        const x = index % info.width;
+        const neighbors = [index - 1, index + 1, index - info.width, index + info.width];
+
+        for (const next of neighbors) {
+          if (next < 0 || next >= total || visited[next]) {
+            continue;
+          }
+          const nextX = next % info.width;
+          if ((next === index - 1 && nextX !== x - 1) || (next === index + 1 && nextX !== x + 1)) {
+            continue;
+          }
+          if (data[next * channels + 3] > 12) {
+            visited[next] = 1;
+            stack.push(next);
+          }
+        }
+      }
+
+      if (component.length > bestComponent.length) {
+        bestComponent = component;
+      }
+    }
+
+    const minimumSubjectPixels = Math.max(8, Math.floor(total * 0.001));
+    if (bestComponent.length < minimumSubjectPixels) {
+      return input;
+    }
+
+    const keep = new Uint8Array(total);
+    for (const index of bestComponent) {
+      keep[index] = 1;
+    }
+    for (let index = 0; index < total; index += 1) {
+      if (!keep[index]) {
+        data[index * channels + 3] = 0;
+      }
+    }
+
+    return sharp(data, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: channels as Raw["channels"]
+      }
+    })
+      .png()
+      .toBuffer();
+  }
+
+  private async getAlphaBounds(input: Buffer): Promise<AlphaBounds | undefined> {
+    const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const channels = info.channels;
+    const total = info.width * info.height;
+    let alphaPixels = 0;
+    let minX = info.width;
+    let minY = info.height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let index = 0; index < total; index += 1) {
+      if (data[index * channels + 3] <= 12) {
+        continue;
+      }
+
+      const x = index % info.width;
+      const y = Math.floor(index / info.width);
+      alphaPixels += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+
+    if (alphaPixels === 0 || maxX < minX || maxY < minY) {
+      return undefined;
+    }
+
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width: maxX - minX + 1,
+      height: maxY - minY + 1,
+      alphaPixels
+    };
+  }
+
+  private async ensureNotBlank(output: Buffer, original: Buffer, options: ProcessImageOptions): Promise<Buffer> {
+    const bounds = await this.getAlphaBounds(output);
+    const minimumPixels = Math.max(2, Math.floor(options.width * options.height * 0.001));
+    if (bounds && bounds.alphaPixels >= minimumPixels) {
+      return output;
+    }
+
+    const fallback = await sharp(original).ensureAlpha().png().toBuffer();
+    const trimmed = options.trim ? await this.trimTransparent(fallback) : fallback;
+    return this.normalizeCanvas(trimmed, { width: options.width, height: options.height }, options.anchor ?? "center", options.padding ?? 0);
+  }
+
   private async normalizeCanvas(input: Buffer, size: Size, anchor: "center" | "bottom-center" = "center", padding = 0): Promise<Buffer> {
     const safePadding = Math.max(0, Math.min(padding, Math.floor(Math.min(size.width, size.height) / 4)));
     const targetWidth = Math.max(1, size.width - safePadding * 2);
@@ -334,10 +568,24 @@ export class ImageProcessingService {
     const metadata = await sharp(resized).metadata();
     const resizedWidth = metadata.width ?? targetWidth;
     const resizedHeight = metadata.height ?? targetHeight;
+    return this.placeOnCanvas(resized, size, anchor, safePadding, resizedWidth, resizedHeight);
+  }
+
+  private async placeOnCanvas(
+    input: Buffer,
+    size: Size,
+    anchor: "center" | "bottom-center" = "center",
+    padding = 0,
+    knownWidth?: number,
+    knownHeight?: number
+  ): Promise<Buffer> {
+    const metadata = knownWidth && knownHeight ? undefined : await sharp(input).metadata();
+    const resizedWidth = knownWidth ?? metadata?.width ?? size.width;
+    const resizedHeight = knownHeight ?? metadata?.height ?? size.height;
     const left = Math.floor((size.width - resizedWidth) / 2);
     const top =
       anchor === "bottom-center"
-        ? Math.max(0, size.height - safePadding - resizedHeight)
+        ? Math.max(0, size.height - padding - resizedHeight)
         : Math.floor((size.height - resizedHeight) / 2);
 
     return sharp({
@@ -349,7 +597,7 @@ export class ImageProcessingService {
       }
     })
       .composite([{
-        input: resized,
+        input,
         left,
         top
       }])

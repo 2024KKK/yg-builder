@@ -10,6 +10,7 @@ import {
   resolveProjectPath,
   sanitizeFileName,
   uniqueByPath,
+  withFileLock,
   writeJsonFile
 } from "./utils";
 import { SettingsService } from "./settingsService";
@@ -80,7 +81,6 @@ export class ProjectService {
     };
 
     await this.saveProject(project);
-    await this.addRecent(project);
     return project;
   }
 
@@ -99,16 +99,129 @@ export class ProjectService {
   }
 
   async openProjectPath(inputPath: string): Promise<Project> {
-    const projectJsonPath = inputPath.endsWith("project.json")
-      ? inputPath
-      : path.join(inputPath, "project.json");
+    const projectJsonPath = this.projectJsonPath(inputPath);
 
     if (!(await fs.pathExists(projectJsonPath))) {
       throw new Error(`未找到项目配置文件：${projectJsonPath}`);
     }
 
+    return withFileLock(projectJsonPath, async () => {
+      const normalized = await this.readNormalizedProject(projectJsonPath);
+      return this.saveProjectUnlocked(normalized);
+    });
+  }
+
+  async saveProject(project: Project): Promise<Project> {
+    return withFileLock(path.join(project.path, "project.json"), () => this.saveProjectUnlocked(project));
+  }
+
+  private async saveProjectUnlocked(project: Project): Promise<Project> {
+    const nextProject: Project = {
+      ...project,
+      updatedAt: nowIso()
+    };
+
+    await ensureProjectDirectories(nextProject.path);
+    await writeJsonFile(path.join(nextProject.path, "project.json"), nextProject);
+    await this.addRecent(nextProject);
+    return nextProject;
+  }
+
+  async addAssets(projectPath: string, assets: Project["assets"]): Promise<Project> {
+    return withFileLock(path.join(projectPath, "project.json"), async () => {
+      const project = await this.readNormalizedProject(this.projectJsonPath(projectPath));
+      const assetMap = new Map(project.assets.map((asset) => [asset.id, asset]));
+
+      for (const asset of assets) {
+        assetMap.set(asset.id, asset);
+      }
+
+      return this.saveProjectUnlocked({
+        ...project,
+        assets: Array.from(assetMap.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      });
+    });
+  }
+
+  async getRecentProjects(): Promise<RecentProject[]> {
+    return withFileLock(this.recentPath, async () => {
+      const recent = await readJsonFile<RecentProject[]>(this.recentPath, []);
+      const existing: RecentProject[] = [];
+
+      for (const item of recent) {
+        if (await fs.pathExists(path.join(item.path, "project.json"))) {
+          existing.push({
+            ...item,
+            name: this.translateLegacyDefault(item.name),
+            style: this.translateLegacyDefault(item.style)
+          });
+        }
+      }
+
+      if (existing.length !== recent.length) {
+        await writeJsonFile(this.recentPath, existing);
+      }
+
+      return existing;
+    });
+  }
+
+  async deleteAsset(projectPath: string, assetId: string): Promise<Project> {
+    return withFileLock(path.join(projectPath, "project.json"), async () => {
+      const project = await this.readNormalizedProject(this.projectJsonPath(projectPath));
+      const asset = project.assets.find((a) => a.id === assetId);
+      if (asset) {
+        const allPaths = [
+          ...asset.files,
+          asset.metadataPath,
+          asset.atlasPath,
+          asset.sheetPath
+        ].filter(Boolean) as string[];
+        for (const file of allPaths) {
+          try { await fs.remove(resolveProjectPath(project.path, file)); } catch { /* may not exist */ }
+        }
+      }
+      return this.saveProjectUnlocked({ ...project, assets: project.assets.filter((a) => a.id !== assetId) });
+    });
+  }
+
+  async removeRecentProject(projectPath: string): Promise<RecentProject[]> {
+    return withFileLock(this.recentPath, async () => {
+      const recent = await readJsonFile<RecentProject[]>(this.recentPath, []);
+      const next = recent.filter((item) => path.normalize(item.path) !== path.normalize(projectPath));
+      await writeJsonFile(this.recentPath, next);
+      return next;
+    });
+  }
+
+  private async addRecent(project: Project): Promise<void> {
+    await withFileLock(this.recentPath, async () => {
+      const recent = await readJsonFile<RecentProject[]>(this.recentPath, []);
+      const next = uniqueByPath([
+        {
+          id: project.id,
+          name: project.name,
+          path: project.path,
+          gameType: project.gameType,
+          style: project.style,
+          updatedAt: nowIso()
+        },
+        ...recent
+      ]).slice(0, 12);
+
+      await writeJsonFile(this.recentPath, next);
+    });
+  }
+
+  private projectJsonPath(inputPath: string): string {
+    return inputPath.endsWith("project.json")
+      ? inputPath
+      : path.join(inputPath, "project.json");
+  }
+
+  private async readNormalizedProject(projectJsonPath: string): Promise<Project> {
     const project = await fs.readJson(projectJsonPath);
-    const normalized: Project = {
+    return {
       id: project.id ?? randomUUID(),
       name: this.translateLegacyDefault(project.name ?? project.projectName ?? "未命名项目"),
       path: path.dirname(projectJsonPath),
@@ -123,99 +236,6 @@ export class ProjectService {
       createdAt: project.createdAt ?? nowIso(),
       updatedAt: project.updatedAt ?? nowIso()
     };
-
-    await ensureProjectDirectories(normalized.path);
-    await this.saveProject(normalized);
-    await this.addRecent(normalized);
-    return normalized;
-  }
-
-  async saveProject(project: Project): Promise<Project> {
-    const nextProject: Project = {
-      ...project,
-      updatedAt: nowIso()
-    };
-
-    await ensureProjectDirectories(nextProject.path);
-    await writeJsonFile(path.join(nextProject.path, "project.json"), nextProject);
-    await this.addRecent(nextProject);
-    return nextProject;
-  }
-
-  async addAssets(projectPath: string, assets: Project["assets"]): Promise<Project> {
-    const project = await this.openProjectPath(projectPath);
-    const assetMap = new Map(project.assets.map((asset) => [asset.id, asset]));
-
-    for (const asset of assets) {
-      assetMap.set(asset.id, asset);
-    }
-
-    return this.saveProject({
-      ...project,
-      assets: Array.from(assetMap.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    });
-  }
-
-  async getRecentProjects(): Promise<RecentProject[]> {
-    const recent = await readJsonFile<RecentProject[]>(this.recentPath, []);
-    const existing: RecentProject[] = [];
-
-    for (const item of recent) {
-      if (await fs.pathExists(path.join(item.path, "project.json"))) {
-        existing.push({
-          ...item,
-          name: this.translateLegacyDefault(item.name),
-          style: this.translateLegacyDefault(item.style)
-        });
-      }
-    }
-
-    if (existing.length !== recent.length) {
-      await writeJsonFile(this.recentPath, existing);
-    }
-
-    return existing;
-  }
-
-  async deleteAsset(projectPath: string, assetId: string): Promise<Project> {
-    const project = await this.openProjectPath(projectPath);
-    const asset = project.assets.find((a) => a.id === assetId);
-    if (asset) {
-      const allPaths = [
-        ...asset.files,
-        asset.metadataPath,
-        asset.atlasPath,
-        asset.sheetPath
-      ].filter(Boolean) as string[];
-      for (const file of allPaths) {
-        try { await fs.remove(resolveProjectPath(project.path, file)); } catch { /* may not exist */ }
-      }
-    }
-    return this.saveProject({ ...project, assets: project.assets.filter((a) => a.id !== assetId) });
-  }
-
-  async removeRecentProject(projectPath: string): Promise<RecentProject[]> {
-    const recent = await this.getRecentProjects();
-    const next = recent.filter((item) => path.normalize(item.path) !== path.normalize(projectPath));
-    await writeJsonFile(this.recentPath, next);
-    return next;
-  }
-
-  private async addRecent(project: Project): Promise<void> {
-    const recent = await readJsonFile<RecentProject[]>(this.recentPath, []);
-    const next = uniqueByPath([
-      {
-        id: project.id,
-        name: project.name,
-        path: project.path,
-        gameType: project.gameType,
-        style: project.style,
-        updatedAt: nowIso()
-      },
-      ...recent
-    ]).slice(0, 12);
-
-    await writeJsonFile(this.recentPath, next);
   }
 
   private normalizeStyleTemplates(templates: StyleTemplate[]): StyleTemplate[] {
