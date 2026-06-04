@@ -454,6 +454,7 @@ export class GenerationService {
       "Keep 15-20% transparent safe padding inside every cell; no body part, weapon, cape, projectile, or magic effect may touch or cross a cell edge.",
       "If the provider canvas is not exactly the grid aspect ratio, keep the whole grid centered with equal transparent outer margins and mathematically even rows and columns.",
       `角色视角：${this.characterViewLabel(input.characterView)}。`,
+      `严格遵守角色名称和素材描述：${input.name || "角色"}；${input.description || "按用户描述"}。不得替换职业、性别、物种、主装备或体型；描述是人形角色时，不要改成动物、怪物、吉祥物或抽象生物。`,
       "所有格子必须是同一个角色：同一脸型、发型、服装、道具、身高比例、色板和轮廓。",
       "每个格子只允许出现一个角色姿势，角色要居中，脚底基线一致，大小一致。",
       "不要文字、不要标签、不要边框、不要网格线、不要额外装饰、不要多个角色。",
@@ -496,7 +497,7 @@ export class GenerationService {
       pipeline = pipeline.extract(crop);
     }
 
-    return pipeline
+    const normalized = await pipeline
       .resize({
         width: size.width,
         height: size.height,
@@ -505,6 +506,37 @@ export class GenerationService {
       })
       .png()
       .toBuffer();
+
+    const minimumForegroundPixels = Math.max(32, Math.floor(size.width * size.height * 0.002));
+    if (await this.countVisibleAlphaPixels(normalized) >= minimumForegroundPixels) {
+      return normalized;
+    }
+
+    return sharp(input)
+      .ensureAlpha()
+      .resize({
+        width: size.width,
+        height: size.height,
+        fit: "fill",
+        kernel: sharp.kernel.nearest
+      })
+      .png()
+      .toBuffer();
+  }
+
+  private async countVisibleAlphaPixels(input: Buffer, threshold = 12): Promise<number> {
+    const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const channels = info.channels;
+    const totalPixels = info.width * info.height;
+    let alphaPixels = 0;
+
+    for (let index = 0; index < totalPixels; index += 1) {
+      if (data[index * channels + 3] > threshold) {
+        alphaPixels += 1;
+      }
+    }
+
+    return alphaPixels;
   }
 
   private async detectCharacterSheetCrop(sheet: Buffer, columns: number, rows: number): Promise<SheetCropRect | undefined> {
