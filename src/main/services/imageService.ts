@@ -125,10 +125,18 @@ export class ImageProcessingService {
     const image = sharp(input).ensureAlpha();
     const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
     const channels = info.channels;
+    const totalPixels = info.width * info.height;
+    const originalAlphaPixels = this.countAlphaPixels(data, channels, totalPixels);
 
-    const alreadyTransparent = this.hasRealAlphaChannel(data, channels, info.width * info.height);
+    const alreadyTransparent = this.hasRealAlphaChannel(data, channels, totalPixels);
     if (alreadyTransparent) {
       const cleaned = this.defringeAlpha(data, info);
+      const cleanedAlphaPixels = this.countAlphaPixels(cleaned, channels, totalPixels);
+      const minimumForegroundPixels = Math.max(16, Math.floor(totalPixels * 0.001));
+      if (cleanedAlphaPixels < minimumForegroundPixels || cleanedAlphaPixels < originalAlphaPixels * 0.1) {
+        return sharp(input).ensureAlpha().png().toBuffer();
+      }
+
       return sharp(cleaned, {
         raw: { width: info.width, height: info.height, channels: channels as Raw["channels"] }
       }).png().toBuffer();
@@ -162,7 +170,7 @@ export class ImageProcessingService {
       }
     }
 
-    const minimumForegroundPixels = Math.max(16, Math.floor((info.width * info.height) * 0.001));
+    const minimumForegroundPixels = Math.max(16, Math.floor(totalPixels * 0.001));
     if (remainingPixels < minimumForegroundPixels) {
       return sharp(input).ensureAlpha().png().toBuffer();
     }
@@ -170,6 +178,16 @@ export class ImageProcessingService {
     return sharp(data, {
       raw: { width: info.width, height: info.height, channels: channels as Raw["channels"] }
     }).png().toBuffer();
+  }
+
+  private countAlphaPixels(data: Buffer, channels: number, totalPixels: number, threshold = 12): number {
+    let alphaPixels = 0;
+    for (let index = 0; index < totalPixels; index += 1) {
+      if (data[index * channels + 3] > threshold) {
+        alphaPixels += 1;
+      }
+    }
+    return alphaPixels;
   }
 
   private hasRealAlphaChannel(data: Buffer, channels: number, totalPixels: number): boolean {
@@ -190,15 +208,21 @@ export class ImageProcessingService {
     const total = info.width * info.height;
     const width = info.width;
     const height = info.height;
+    const sourceAlpha = new Uint8Array(total);
+
+    for (let i = 0; i < total; i++) {
+      sourceAlpha[i] = data[i * channels + 3];
+    }
 
     for (let i = 0; i < total; i++) {
       const offset = i * channels;
-      if (data[offset + 3] <= 16) {
+      const alpha = sourceAlpha[i];
+      if (alpha <= 16) {
         data[offset + 3] = 0;
         continue;
       }
 
-      if (data[offset + 3] < 128) {
+      if (alpha < 128) {
         data[offset + 3] = 0;
         continue;
       }
@@ -215,7 +239,7 @@ export class ImageProcessingService {
           const nx = x + dx;
           if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
           totalNeighbors++;
-          const neighborAlpha = data[(ny * width + nx) * channels + 3];
+          const neighborAlpha = sourceAlpha[ny * width + nx];
           if (neighborAlpha <= 16) transparentNeighbors++;
         }
       }
