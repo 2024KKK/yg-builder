@@ -12,6 +12,10 @@
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
+    "dist:mac:arm64": "npm run build && electron-builder --mac --arm64",
+    "dist:mac:x64": "npm run build && electron-builder --mac --x64",
+    "dist:mac:signed:arm64": "npm run build && electron-builder --mac --arm64 -c.mac.notarize=true",
+    "dist:mac:signed:x64": "npm run build && electron-builder --mac --x64 -c.mac.notarize=true",
     "dist:linux": "npm run build && electron-builder --linux",
     "typecheck": "tsc --noEmit"
   },
@@ -47,7 +51,9 @@
     },
     "mac": {
       "target": ["dmg", "zip"],
-      "icon": "docs/icon.png"
+      "icon": "docs/icon.png",
+      "category": "public.app-category.graphics-design",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": ["AppImage", "deb"],

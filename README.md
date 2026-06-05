@@ -61,9 +61,14 @@ npm run dev       # 开发模式
 npm run typecheck # 类型检查
 npm run build     # 构建到 out/
 npm run dist:win  # 打包 Windows 安装包（输出到 release/）
+npm run dist:mac:arm64 # 在 Apple Silicon Mac 上打包 DMG/ZIP
+npm run dist:mac:x64   # 在 Intel Mac 上打包 DMG/ZIP
 ```
 
 一键安装包位于 `release/Topspeed Builder Setup 1.0.1.exe`。
+macOS 内测包位于 `release/Topspeed Builder-1.0.1-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.1-mac-x64.dmg`。
+
+macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [macOS Build and Release](./docs/mac-release.md)。
 
 ## 智能生成接口配置
 
@@ -181,9 +186,14 @@ npm run dev       # dev mode
 npm run typecheck # type checking
 npm run build     # compile to out/
 npm run dist:win  # package Windows installer (output in release/)
+npm run dist:mac:arm64 # package Apple Silicon DMG/ZIP on macOS
+npm run dist:mac:x64   # package Intel Mac DMG/ZIP on macOS
 ```
 
 One-click installer at `release/Topspeed Builder Setup 1.0.1.exe`.
+macOS test artifacts are written to `release/Topspeed Builder-1.0.1-mac-arm64.dmg` or `release/Topspeed Builder-1.0.1-mac-x64.dmg`.
+
+macOS packaging must run on macOS. The CI workflow at `.github/workflows/build-app.yml` builds Windows, macOS arm64, and macOS x64 test artifacts. Public macOS distribution requires Apple Developer ID signing and notarization; see [macOS Build and Release](./docs/mac-release.md).
 
 ## AI API Configuration
 

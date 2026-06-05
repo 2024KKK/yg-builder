@@ -34,6 +34,7 @@ declare global {
       getHistory(projectPath: string): Promise<IpcResponse<GenerationHistoryRecord[]>>;
       readImageDataUrl(projectPath: string, filePath: string): Promise<IpcResponse<string>>;
       showItemInFolder(filePath: string): Promise<IpcResponse<boolean>>;
+      showProjectItemInFolder(projectPath: string, filePath: string): Promise<IpcResponse<boolean>>;
       openPath(filePath: string): Promise<IpcResponse<boolean>>;
     };
   }
