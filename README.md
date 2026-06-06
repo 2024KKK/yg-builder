@@ -70,6 +70,27 @@ macOS 内测包位于 `release/Topspeed Builder-1.0.1-mac-arm64.dmg` 或 `releas
 
 macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [macOS Build and Release](./docs/mac-release.md)。
 
+### macOS 命令行运行
+
+如果暂时没有 macOS 安装包，Mac 用户可以从源码启动：
+
+```bash
+git clone https://github.com/voicepeak/topspeed-builder.git
+cd topspeed-builder
+git checkout macos
+npm ci
+npm run dev
+```
+
+也可以使用生产构建预览：
+
+```bash
+npm run build
+npm start
+```
+
+建议使用 Node.js 22。若安装原生依赖失败，先执行 `xcode-select --install` 安装 Xcode Command Line Tools。
+
 ## 智能生成接口配置
 
 在设置页填写：
@@ -194,6 +215,27 @@ One-click installer at `release/Topspeed Builder Setup 1.0.1.exe`.
 macOS test artifacts are written to `release/Topspeed Builder-1.0.1-mac-arm64.dmg` or `release/Topspeed Builder-1.0.1-mac-x64.dmg`.
 
 macOS packaging must run on macOS. The CI workflow at `.github/workflows/build-app.yml` builds Windows, macOS arm64, and macOS x64 test artifacts. Public macOS distribution requires Apple Developer ID signing and notarization; see [macOS Build and Release](./docs/mac-release.md).
+
+### macOS CLI Run
+
+If a macOS installer is not available yet, Mac users can run the app from source:
+
+```bash
+git clone https://github.com/voicepeak/topspeed-builder.git
+cd topspeed-builder
+git checkout macos
+npm ci
+npm run dev
+```
+
+Production preview is also available:
+
+```bash
+npm run build
+npm start
+```
+
+Node.js 22 is recommended. If native dependency installation fails, install Xcode Command Line Tools with `xcode-select --install`.
 
 ## AI API Configuration
 
