@@ -26,5 +26,7 @@ contextBridge.exposeInMainWorld("topspeedBuilder", {
     ipcRenderer.invoke("image:dataUrl", projectPath, filePath),
   deleteAsset: (projectPath: string, assetId: string) => ipcRenderer.invoke("project:deleteAsset", projectPath, assetId),
   showItemInFolder: (filePath: string) => ipcRenderer.invoke("shell:showItem", filePath),
+  showProjectItemInFolder: (projectPath: string, filePath: string) =>
+    ipcRenderer.invoke("shell:showProjectItem", projectPath, filePath),
   openPath: (filePath: string) => ipcRenderer.invoke("shell:openPath", filePath)
 });

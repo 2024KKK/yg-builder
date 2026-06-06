@@ -103,6 +103,11 @@ function registerIpc(): void {
     return true;
   });
 
+  handle("shell:showProjectItem", async (projectPath: string, filePath: string) => {
+    shell.showItemInFolder(resolveProjectPath(projectPath, filePath));
+    return true;
+  });
+
   handle("shell:openPath", async (filePath: string) => {
     const result = await shell.openPath(filePath);
     if (result) {

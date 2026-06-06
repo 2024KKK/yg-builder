@@ -1586,7 +1586,7 @@ function AssetCard(props: {
           onClick={() => {
             const file = props.asset.metadataPath ?? pngFile;
             if (file) {
-              void props.runTask(t("busy.locateFile"), () => unwrap(window.topspeedBuilder.showItemInFolder(resolveFile(props.project.path, file))));
+              void props.runTask(t("busy.locateFile"), () => unwrap(window.topspeedBuilder.showProjectItemInFolder(props.project.path, file)));
             }
           }}
         >
@@ -1872,13 +1872,6 @@ function gameTypeLabel(gameType: string): string {
 function gameTypeLabelT(t: (key: string) => string, gameType: string): string {
   const found = gameTypeOptions.find((option) => selectOptionValue(option) === gameType);
   return found ? t(selectOptionLabel(found)) : gameType;
-}
-
-function resolveFile(projectPath: string, filePath: string): string {
-  if (/^[a-zA-Z]:[\\/]/.test(filePath) || filePath.startsWith("/")) {
-    return filePath;
-  }
-  return `${projectPath}\\${filePath.replace(/\//g, "\\")}`;
 }
 
 function formatQueueError(error: unknown): string {
