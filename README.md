@@ -229,6 +229,15 @@ Project files, history, reference images, and API keys stay on the local machine
 | Post-Processing | Uses Sharp for transparency, trimming, resizing, and PNG output |
 | Exports | Creates Unity, Godot, Tiled, Phaser, Cocos, common folders, and ZIP bundles |
 
+## Typical Workflow
+
+1. Create or open a local asset project.
+2. Configure game type, art style, default size, and export targets.
+3. Choose an asset type, then fill in name, description, references, animation frames, or tileset theme.
+4. Use `local-draft` to validate the pipeline offline, or switch to an OpenAI-compatible API for real generation.
+5. Review generated assets, sprite sheets, atlases, and metadata in the preview page.
+6. Export engine-specific folders and optionally create a complete ZIP package.
+
 ## Quick Start
 
 Node.js 22 is recommended.
@@ -240,7 +249,14 @@ npm run typecheck
 npm run build
 ```
 
-Packaging:
+Production preview:
+
+```bash
+npm run build
+npm start
+```
+
+Packaging installers:
 
 ```bash
 npm run dist:win
@@ -250,6 +266,94 @@ npm run dist:linux
 ```
 
 Build artifacts are written to `release/`. macOS distribution requires Developer ID signing and notarization; see [docs/mac-release.md](./docs/mac-release.md).
+
+### macOS CLI Run
+
+If a macOS installer is not available, Mac users can run from source:
+
+```bash
+git clone https://github.com/voicepeak/topspeed-builder.git
+cd topspeed-builder
+npm ci
+npm run dev
+```
+
+If native dependency installation fails, install Xcode Command Line Tools with `xcode-select --install`.
+
+## AI Generation API
+
+Configure the image generation service in Settings:
+
+| Field | Description |
+|---|---|
+| Provider | `openai`, `custom`, or `local-draft` |
+| API Key | Image generation service API key, stored locally |
+| API Base URL | OpenAI-compatible image generation or image edits endpoint |
+| Model | For example `gpt-image-1.5`, `gpt-image-1`, or `gpt-image-1-mini` |
+
+Minimal OpenAI-compatible text-to-image request body:
+
+```json
+{
+  "model": "gpt-image-1.5",
+  "prompt": "prompt text",
+  "n": 1,
+  "size": "1024x1024"
+}
+```
+
+Image-to-image mode stores local reference copies inside the project and sends multipart requests to an OpenAI-compatible image edits endpoint. Official OpenAI image APIs support multiple reference images, optional masks, and GPT Image models such as `gpt-image-1.5`, `gpt-image-1`, and `gpt-image-1-mini`.
+
+`local-draft` mode creates local placeholder PNGs without external API calls. It is useful for validating project creation, queues, post-processing, sprite sheets, atlases, and exports without a key or network access.
+
+## Local Project Structure
+
+```text
+project.json
+generated/
+  raw/
+  processed/
+sprites/
+icons/
+tilesets/
+sheets/
+atlas/
+exports/
+history/
+references/
+  images/
+  masks/
+  thumbnails/
+```
+
+## Export Targets
+
+| Target | Output |
+|---|---|
+| Unity | PNG, Sprite Sheet, Atlas, JSON metadata, import notes |
+| Godot | PNG, Sprite Sheet, SpriteFrames notes, JSON metadata, import notes |
+| Tiled | TileSet PNG, TileSet JSON, TMX map file, import notes |
+| Phaser / Cocos | PNG, Sprite Sheet, Atlas, JSON frame data |
+| Common | Generic PNG + JSON metadata |
+| ZIP | Complete exported asset package |
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Desktop Shell | Electron 33 |
+| Frontend | React 18, TypeScript, Lucide React |
+| i18n | i18next, react-i18next |
+| Build | Vite 5, electron-vite, electron-builder |
+| Image Processing | Sharp |
+| Archive Export | JSZip |
+| Local Storage | JSON files, project directory, Electron userData |
+
+## Related Docs
+
+- [Product PRD](./topspeed-builder-PRD.md)
+- [macOS Build and Release](./docs/mac-release.md)
+- [Static project documentation page](./docs/index.html)
 
 ## License
 
