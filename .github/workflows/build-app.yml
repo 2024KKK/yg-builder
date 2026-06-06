@@ -12,7 +12,10 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
+      - "docs/icon.ico"
+      - "docs/icon.icns"
       - "docs/icon.png"
+      - "scripts/generate-icon.mjs"
       - "src/**"
   pull_request:
     paths:
@@ -21,7 +24,10 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
+      - "docs/icon.ico"
+      - "docs/icon.icns"
       - "docs/icon.png"
+      - "scripts/generate-icon.mjs"
       - "src/**"
   workflow_dispatch:
 
