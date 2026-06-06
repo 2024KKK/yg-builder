@@ -1,6 +1,8 @@
 import path from "node:path";
 import fs from "fs-extra";
 
+const fileLocks = new Map<string, Promise<void>>();
+
 export const PROJECT_DIRECTORIES = [
   "generated/raw",
   "generated/processed",
@@ -73,6 +75,27 @@ export async function readJsonFile<T>(filePath: string, fallback: T): Promise<T>
 export async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
   await fs.ensureDir(path.dirname(filePath));
   await fs.writeJson(filePath, data, { spaces: 2 });
+}
+
+export async function withFileLock<T>(filePath: string, task: () => Promise<T>): Promise<T> {
+  const key = path.resolve(filePath).toLowerCase();
+  const previous = fileLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const next = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const current = previous.catch(() => undefined).then(() => next);
+  fileLocks.set(key, current);
+
+  await previous.catch(() => undefined);
+  try {
+    return await task();
+  } finally {
+    release();
+    if (fileLocks.get(key) === current) {
+      fileLocks.delete(key);
+    }
+  }
 }
 
 export function uniqueByPath<T extends { path: string }>(items: T[]): T[] {

@@ -72,17 +72,8 @@ export class AIGenerationService {
 
     const endpoint = this.resolveOpenAIImageEndpoint(args.settings.apiBaseUrl, "generations");
     this.assertHttpEndpoint(endpoint, "OpenAI 接口基础地址");
-    const requestPayload: Record<string, unknown> = {
-      model: args.settings.model || "gpt-image-1.5",
-      prompt: args.prompt,
-      n: 1,
-      size: this.mapProviderSize(args.size)
-    };
-
-    if (this.shouldSendOpenAIExtendedOptions(endpoint)) {
-      requestPayload.quality = args.settings.generationQuality;
-      requestPayload.background = args.transparentBackground ? "transparent" : "auto";
-    }
+    const includeExtendedOptions = this.shouldSendOpenAIExtendedOptions(endpoint, args.settings.model);
+    const requestPayload = this.buildOpenAIGenerationPayload(args, includeExtendedOptions);
 
     const response = await this.fetchWithContext(endpoint, {
       method: "POST",
@@ -95,6 +86,10 @@ export class AIGenerationService {
 
     const responseText = await response.text();
     if (!response.ok) {
+      if (includeExtendedOptions && this.isUnsupportedImageOptionError(response.status, responseText)) {
+        return this.generateWithOpenAIWithoutExtendedOptions(args, endpoint);
+      }
+
       throw new Error(
         `OpenAI 图片生成失败：HTTP ${response.status} ${response.statusText}. ${this.summarizeBody(responseText)}`
       );
@@ -124,27 +119,8 @@ export class AIGenerationService {
     const endpoint = this.resolveOpenAIImageEndpoint(args.settings.apiBaseUrl, "edits");
     this.assertHttpEndpoint(endpoint, "OpenAI 接口基础地址");
 
-    const form = new FormData();
-    form.append("model", args.settings.model || "gpt-image-1.5");
-    form.append("prompt", args.prompt);
-    form.append("n", "1");
-    form.append("size", this.mapProviderSize(args.size));
-
-    if (this.shouldSendOpenAIExtendedOptions(endpoint)) {
-      form.append("quality", args.settings.generationQuality);
-      form.append("background", args.transparentBackground ? "transparent" : "auto");
-      if (args.referenceStrength === "high") {
-        form.append("input_fidelity", "high");
-      }
-    }
-
-    for (const reference of references) {
-      form.append("image", await this.fileToBlob(reference.filePath), path.basename(reference.filePath));
-    }
-
-    if (args.maskImagePath) {
-      form.append("mask", await this.fileToBlob(args.maskImagePath), path.basename(args.maskImagePath));
-    }
+    const includeExtendedOptions = this.shouldSendOpenAIExtendedOptions(endpoint, args.settings.model);
+    const form = await this.buildOpenAIEditForm(args, includeExtendedOptions);
 
     const response = await this.fetchWithContext(endpoint, {
       method: "POST",
@@ -153,6 +129,16 @@ export class AIGenerationService {
       },
       body: form
     }, "OpenAI");
+
+    if (!response.ok && includeExtendedOptions) {
+      const responseText = await response.text();
+      if (this.isUnsupportedImageOptionError(response.status, responseText)) {
+        return this.generateOpenAIEditWithoutExtendedOptions(args, endpoint);
+      }
+      throw new Error(
+        `OpenAI 图片接口失败: HTTP ${response.status} ${response.statusText}. ${this.summarizeBody(responseText)}`
+      );
+    }
 
     return this.readImageResponse(response, "OpenAI", endpoint);
   }
@@ -244,12 +230,117 @@ export class AIGenerationService {
     return url.toString();
   }
 
-  private shouldSendOpenAIExtendedOptions(endpoint: string): boolean {
+  private buildOpenAIGenerationPayload(args: GenerateImageArgs, includeExtendedOptions: boolean): Record<string, unknown> {
+    const requestPayload: Record<string, unknown> = {
+      model: args.settings.model || "gpt-image-1.5",
+      prompt: args.prompt,
+      n: 1,
+      size: this.mapProviderSize(args.size)
+    };
+
+    if (includeExtendedOptions) {
+      requestPayload.quality = args.settings.generationQuality;
+      requestPayload.background = args.transparentBackground ? "transparent" : "auto";
+    }
+
+    return requestPayload;
+  }
+
+  private async generateWithOpenAIWithoutExtendedOptions(args: GenerateImageArgs, endpoint: string): Promise<Buffer> {
+    const response = await this.fetchWithContext(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.settings.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(this.buildOpenAIGenerationPayload(args, false))
+    }, "OpenAI");
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `OpenAI 图片生成失败：HTTP ${response.status} ${response.statusText}. ${this.summarizeBody(responseText)}`
+      );
+    }
+
+    return this.extractImageFromPayload(
+      this.parseJsonResponse(responseText, {
+        provider: "OpenAI",
+        endpoint,
+        status: response.status,
+        contentType: response.headers.get("content-type") ?? ""
+      }),
+      "OpenAI"
+    );
+  }
+
+  private async buildOpenAIEditForm(args: GenerateImageArgs, includeExtendedOptions: boolean): Promise<FormData> {
+    const form = new FormData();
+    form.append("model", args.settings.model || "gpt-image-1.5");
+    form.append("prompt", args.prompt);
+    form.append("n", "1");
+    form.append("size", this.mapProviderSize(args.size));
+
+    if (includeExtendedOptions) {
+      form.append("quality", args.settings.generationQuality);
+      form.append("background", args.transparentBackground ? "transparent" : "auto");
+      if (args.referenceStrength === "high") {
+        form.append("input_fidelity", "high");
+      }
+    }
+
+    for (const reference of args.referenceImages ?? []) {
+      form.append("image", await this.fileToBlob(reference.filePath), path.basename(reference.filePath));
+    }
+
+    if (args.maskImagePath) {
+      form.append("mask", await this.fileToBlob(args.maskImagePath), path.basename(args.maskImagePath));
+    }
+
+    return form;
+  }
+
+  private async generateOpenAIEditWithoutExtendedOptions(args: GenerateImageArgs, endpoint: string): Promise<Buffer> {
+    const response = await this.fetchWithContext(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.settings.apiKey}`
+      },
+      body: await this.buildOpenAIEditForm(args, false)
+    }, "OpenAI");
+
+    return this.readImageResponse(response, "OpenAI", endpoint);
+  }
+
+  private shouldSendOpenAIExtendedOptions(endpoint: string, model: string): boolean {
+    const isGptImageModel = /^gpt-image-/i.test(model || "");
     try {
-      return new URL(endpoint).hostname === "api.openai.com";
+      return new URL(endpoint).hostname === "api.openai.com" || isGptImageModel;
     } catch {
+      return isGptImageModel;
+    }
+  }
+
+  private isUnsupportedImageOptionError(status: number, responseText: string): boolean {
+    if (status !== 400 && status !== 422) {
       return false;
     }
+
+    const lower = responseText.toLowerCase();
+    const mentionsExtendedOption =
+      lower.includes("background") ||
+      lower.includes("quality") ||
+      lower.includes("input_fidelity");
+    const rejectsParameter =
+      lower.includes("unknown parameter") ||
+      lower.includes("unsupported parameter") ||
+      lower.includes("unrecognized parameter") ||
+      lower.includes("invalid parameter") ||
+      lower.includes("not supported") ||
+      lower.includes("extra input") ||
+      lower.includes("unexpected");
+
+    return mentionsExtendedOption && rejectsParameter;
   }
 
   private assertHttpEndpoint(endpoint: string, label: string): void {

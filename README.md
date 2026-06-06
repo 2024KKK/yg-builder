@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/topspeed--builder-v1.0.1-00d4ff?style=flat-square&labelColor=0b0e11">
-    <img src="https://img.shields.io/badge/topspeed--builder-v1.0.1-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11">
+    <img src="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
   </picture>
 </p>
 
@@ -65,8 +65,8 @@ npm run dist:mac:arm64 # 在 Apple Silicon Mac 上打包 DMG/ZIP
 npm run dist:mac:x64   # 在 Intel Mac 上打包 DMG/ZIP
 ```
 
-一键安装包位于 `release/Topspeed Builder Setup 1.0.1.exe`。
-macOS 内测包位于 `release/Topspeed Builder-1.0.1-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.1-mac-x64.dmg`。
+一键安装包位于 `release/Topspeed Builder Setup 1.0.3.exe`。
+macOS 内测包位于 `release/Topspeed Builder-1.0.3-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.3-mac-x64.dmg`。
 
 macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [macOS Build and Release](./docs/mac-release.md)。
 
@@ -211,8 +211,8 @@ npm run dist:mac:arm64 # package Apple Silicon DMG/ZIP on macOS
 npm run dist:mac:x64   # package Intel Mac DMG/ZIP on macOS
 ```
 
-One-click installer at `release/Topspeed Builder Setup 1.0.1.exe`.
-macOS test artifacts are written to `release/Topspeed Builder-1.0.1-mac-arm64.dmg` or `release/Topspeed Builder-1.0.1-mac-x64.dmg`.
+One-click installer at `release/Topspeed Builder Setup 1.0.3.exe`.
+macOS test artifacts are written to `release/Topspeed Builder-1.0.3-mac-arm64.dmg` or `release/Topspeed Builder-1.0.3-mac-x64.dmg`.
 
 macOS packaging must run on macOS. The CI workflow at `.github/workflows/build-app.yml` builds Windows, macOS arm64, and macOS x64 test artifacts. Public macOS distribution requires Apple Developer ID signing and notarization; see [macOS Build and Release](./docs/mac-release.md).
 

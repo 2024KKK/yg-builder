@@ -1,12 +1,13 @@
 {
   "name": "topspeed-builder",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Topspeed Builder - local desktop workflow for generating and exporting 2D game assets.",
   "main": "out/main/index.js",
   "author": "Topspeed Builder",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:renderer": "electron-vite --rendererOnly",
     "start": "electron-vite preview",
     "build": "npm run typecheck && electron-vite build",
     "dist": "npm run build && electron-builder",
