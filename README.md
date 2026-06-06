@@ -1,74 +1,102 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11">
-    <img src="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
-  </picture>
+  <img src="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
+  <img src="https://img.shields.io/badge/Electron-33.x-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/React-18.x-58c4dc?style=flat-square&logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-5.x-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/license-MIT-8a9aa8?style=flat-square" alt="MIT 协议">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Electron-33.x-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron"/>
-  <img src="https://img.shields.io/badge/React-18.x-58c4dc?style=flat-square&logo=react&logoColor=white" alt="React"/>
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/Vite-5.x-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
-  <img src="https://img.shields.io/badge/license-MIT-8a9aa8?style=flat-square" alt="MIT 协议"/>
+  <a href="#zh">中文</a> · <a href="#en">English</a>
 </p>
 
 <p align="center">
-  <a href="#zh">🇨🇳 中文</a> · <a href="#en">🇬🇧 英文</a>
-</p>
-
-<p align="center">
-  <img src="./docs/readme-hero.svg" alt="Topspeed Builder 动态流水线横幅" width="100%" />
+  <img src="./docs/readme-hero.svg" alt="Topspeed Builder 本地二维游戏素材流水线" width="100%">
 </p>
 
 ---
 
-<h1 align="center" id="zh">topspeed-builder</h1>
+<h1 align="center" id="zh">Topspeed Builder</h1>
 
 <p align="center">
-  Electron、React 与 TypeScript 桌面应用，将智能图片生成接入本地二维游戏素材流水线。
+  本地桌面端 AI 2D 游戏素材工程化生成工具。把 AI 生成结果从“好看的图片”整理成可直接导入 Unity、Godot、Tiled、Phaser 和 Cocos 的素材包。
 </p>
 
-## 概述
+## 项目简介
 
-面向独立游戏开发者、美术原型师和工具链验证场景。创建本地项目，定义游戏类型、美术风格与导出目标，批量生成图标、道具、角色动作帧、怪物、背景、特效和瓦片集。所有数据与密钥均保存在本地，无云端依赖。
+Topspeed Builder 面向独立游戏开发者、美术原型师和小型游戏团队。它不是一个单纯输入提示词的生图页面，而是一个本地素材工作台：创建项目、统一风格、批量生成图标、道具、角色、怪物、背景、特效和瓦片集，再通过本地后处理、精灵表、纹理图集和导出模板完成交付。
 
-## 语言边界
+所有项目文件、历史记录、参考图和 API Key 都保存在本机。没有必须依赖的云端项目服务；需要联网的部分仅是你配置的图片生成接口。
 
-- 中文界面与中文文档使用中文术语，不混写可翻译的英文词。
-- 英文内容只放在独立英文文档区、代码标识、文件格式、模型名称、接口路径和第三方产品名中。
-- 用户可见的提示词、按钮、表单、状态、错误和导出说明默认使用中文。
+## 真实界面截图
 
-## 功能模块
+以下截图来自 `Pixel Knight Asset Pack` 示例项目，展示当前桌面应用的真实工作界面。
+
+![Topspeed Builder 项目首页](./docs/screenshots/app-home.png)
+
+| 项目配置 | 素材生成队列 |
+|---|---|
+| ![项目配置页：风格、尺寸和导出目标](./docs/screenshots/project-config.png) | ![素材生成页：任务队列、并发和角色动作表配置](./docs/screenshots/generation-queue.png) |
+
+| 资源导出 | 角色源动作帧示例 |
+|---|---|
+| ![资源导出页：引擎目标和 ZIP 包](./docs/screenshots/export-targets.png) | ![角色动作帧源图](./docs/screenshots/character-source-sheet.png) |
+
+## 核心能力
 
 | 模块 | 能力 |
-|------|------|
-| **项目** | 创建本地目录、保存项目配置文件、管理最近项目 |
-| **生成** | 调用 OpenAI 兼容图片接口、自定义接口或本地草稿模式 |
-| **图生图** | 上传参考图、复用项目素材、按主体 / 风格 / 构图 / 色板生成变体，支持蒙版局部替换 |
-| **后处理** | Sharp 处理透明背景、裁切、统一尺寸、PNG 输出 |
-| **批量** | 图标 / 道具 / 界面素材批量名称列表生成 |
-| **动画** | 角色动作帧合成精灵表 |
-| **瓦片集** | 基础瓦片、预览图、元数据、Tiled 地图文件导出 |
-| **打包** | 纹理图集合成、JSON 元数据、压缩包导出 |
-| **记录** | 生成历史、提示词、参数和输出文件保存 |
+|---|---|
+| 项目管理 | 创建本地项目目录、写入 `project.json`、维护最近项目 |
+| 生成模式 | 文本生成、参考图生成、自定义接口、本地草稿模式 |
+| 参考图工作流 | 导入主体、风格、构图、色板参考图，支持蒙版局部替换 |
+| 批量生产 | 按名称列表生成图标、道具、界面素材等批量资源 |
+| 角色动画 | 按动作帧配置生成角色序列，并合成 Sprite Sheet |
+| 瓦片集 | 生成瓦片 PNG、预览图、元数据和 Tiled 地图文件 |
+| 本地后处理 | 使用 Sharp 完成透明背景、裁切、尺寸统一和 PNG 输出 |
+| 图集打包 | 合成 Texture Atlas，并输出 JSON 帧坐标 |
+| 导出打包 | 生成 Unity / Godot / Tiled / Phaser / Cocos / 通用目录和 ZIP 包 |
+| 历史记录 | 保存提示词、参数、输出文件和生成时间，便于回溯 |
+
+## 典型使用流程
+
+1. 新建或打开一个本地素材项目。
+2. 配置游戏类型、美术风格、默认尺寸和导出目标。
+3. 选择素材类型，并填写名称、描述、参考图、动作帧或瓦片主题。
+4. 使用 `local-draft` 离线验证流程，或切换到 OpenAI 兼容接口执行真实生成。
+5. 在预览页检查素材包、精灵表、图集和元数据。
+6. 选择目标引擎并导出目录，可同时生成完整 ZIP 资源包。
 
 ## 快速开始
 
+建议使用 Node.js 22。
+
 ```bash
 npm install
-npm run dev       # 开发模式
-npm run typecheck # 类型检查
+npm run dev       # 开发模式启动 Electron 应用
+npm run typecheck # TypeScript 类型检查
 npm run build     # 构建到 out/
-npm run dist:win  # 打包 Windows 安装包（输出到 release/）
-npm run dist:mac:arm64 # 在 Apple Silicon Mac 上打包 DMG/ZIP
-npm run dist:mac:x64   # 在 Intel Mac 上打包 DMG/ZIP
 ```
 
-一键安装包位于 `release/Topspeed Builder Setup 1.0.3.exe`。
-macOS 内测包位于 `release/Topspeed Builder-1.0.3-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.3-mac-x64.dmg`。
+生产预览：
 
-macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [macOS Build and Release](./docs/mac-release.md)。
+```bash
+npm run build
+npm start
+```
+
+打包安装包：
+
+```bash
+npm run dist:win       # Windows NSIS 安装包，输出到 release/
+npm run dist:mac:arm64 # Apple Silicon DMG/ZIP，需要 macOS
+npm run dist:mac:x64   # Intel Mac DMG/ZIP，需要 macOS
+npm run dist:linux     # AppImage / deb
+```
+
+当前 Windows 安装包位于 `release/Topspeed Builder Setup 1.0.3.exe`。macOS 内测包位于 `release/Topspeed Builder-1.0.3-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.3-mac-x64.dmg`。
+
+macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [docs/mac-release.md](./docs/mac-release.md)。
 
 ### macOS 命令行运行
 
@@ -77,32 +105,24 @@ macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build
 ```bash
 git clone https://github.com/voicepeak/topspeed-builder.git
 cd topspeed-builder
-git checkout macos
 npm ci
 npm run dev
 ```
 
-也可以使用生产构建预览：
+若安装原生依赖失败，先执行 `xcode-select --install` 安装 Xcode Command Line Tools。
 
-```bash
-npm run build
-npm start
-```
+## 智能生成接口
 
-建议使用 Node.js 22。若安装原生依赖失败，先执行 `xcode-select --install` 安装 Xcode Command Line Tools。
+在设置页配置图片生成服务：
 
-## 智能生成接口配置
+| 配置项 | 说明 |
+|---|---|
+| 服务商 | `openai`、`custom` 或 `local-draft` |
+| 接口密钥 | 图片生成服务的 API Key，仅保存在本机 |
+| 接口基础地址 | OpenAI 兼容图片生成或图片编辑接口地址 |
+| 模型 | 例如 `gpt-image-1.5`、`gpt-image-1`、`gpt-image-1-mini` |
 
-在设置页填写：
-
-| 配置项 | 建议值 |
-|--------|--------|
-| 服务商 | `openai` \| `custom` \| `local-draft` |
-| 接口密钥 | 图片生成服务的接口密钥 |
-| 接口基础地址 | OpenAI 兼容接口，如 `https://example.com/v1/images/generations` |
-| 模型 | 如 `gpt-image-1.5` |
-
-OpenAI 兼容模式发送最小请求体：
+OpenAI 兼容文本生成最小请求体：
 
 ```json
 {
@@ -113,17 +133,13 @@ OpenAI 兼容模式发送最小请求体：
 }
 ```
 
-透明背景、裁切和目标尺寸统一由本地 Sharp 后处理完成。
-
 图生图模式会在本地项目中保存参考图副本，并通过 OpenAI 图片编辑兼容接口发送分段表单请求。OpenAI 官方接口支持多张参考图、可选蒙版，以及 `gpt-image-1.5` / `gpt-image-1` / `gpt-image-1-mini` 等图像模型。
 
-## 本地草稿模式
+`local-draft` 模式不会调用外部 API，会生成本地占位 PNG。它适合在没有密钥、没有网络或不想消耗额度时验证项目创建、队列、后处理、精灵表、图集和导出链路。
 
-设置服务商为 `local-draft` 可生成本地占位 PNG，不调用外部接口。适合验证项目创建、后处理流程、精灵表 / 图集 / 瓦片集合成、元数据和压缩包导出。
+## 本地项目结构
 
-## 项目目录结构
-
-```
+```text
 project.json
 generated/
   raw/
@@ -143,26 +159,32 @@ references/
 
 ## 导出目标
 
-| 目标 | 内容 |
-|------|------|
-| **Unity** | PNG、精灵表、图集、JSON 元数据、导入说明 |
-| **Godot** | PNG、精灵表、动画资源说明、JSON 元数据、导入说明 |
-| **Tiled** | 瓦片集 PNG、瓦片集 JSON、地图文件、导入说明 |
-| **Phaser / Cocos** | PNG、精灵表、图集、JSON 帧数据 |
-| **通用** | 通用 PNG + JSON |
-| **ZIP** | 完整导出资源包压缩文件 |
+| 目标 | 输出内容 |
+|---|---|
+| Unity | PNG、Sprite Sheet、Atlas、JSON 元数据、导入说明 |
+| Godot | PNG、Sprite Sheet、SpriteFrames 说明、JSON 元数据、导入说明 |
+| Tiled | TileSet PNG、TileSet JSON、TMX 地图文件、导入说明 |
+| Phaser / Cocos | PNG、Sprite Sheet、Atlas、JSON 帧数据 |
+| 通用 | 通用 PNG + JSON 元数据 |
+| ZIP | 完整导出资源包 |
 
 ## 技术栈
 
 | 层级 | 技术 |
-|------|------|
+|---|---|
 | 桌面壳 | Electron 33 |
 | 前端 | React 18、TypeScript、Lucide React |
 | 国际化 | i18next、react-i18next |
-| 构建 | Vite 5、electron-vite |
+| 构建 | Vite 5、electron-vite、electron-builder |
 | 图像处理 | Sharp |
-| 打包导出 | JSZip |
+| 归档导出 | JSZip |
 | 本地存储 | JSON 文件、项目目录、Electron userData |
+
+## 相关文档
+
+- [产品 PRD](./topspeed-builder-PRD.md)
+- [macOS 构建与发布](./docs/mac-release.md)
+- [静态项目文档页](./docs/index.html)
 
 ## 协议
 
@@ -173,142 +195,61 @@ MIT
 <h1 align="center" id="en">Topspeed Builder</h1>
 
 <p align="center">
-  Electron + React + TypeScript desktop app — AI image generation meets local 2D game asset pipeline.
+  A local desktop pipeline for turning AI-generated images into production-ready 2D game asset packages.
 </p>
 
 ## Overview
 
-Built for indie developers, art prototypers, and toolchain validators. Create local projects with game type, art style, and export targets; batch-generate icons, items, character poses, enemies, backgrounds, effects, and TileSets. All data and keys stay local — zero cloud dependency.
+Topspeed Builder is an Electron + React + TypeScript desktop app for indie developers, art prototypers, and small game teams. It creates local asset projects, standardizes style settings, generates 2D game assets, post-processes images locally, builds sprite sheets and texture atlases, then exports engine-friendly folders and ZIP bundles.
 
-## Language Boundary
+Project files, history, reference images, and API keys stay on the local machine.
 
-- UI and documentation default to Chinese; English content is kept only in the standalone English section, code identifiers, file formats, model names, API paths, and third-party product names.
-- User-facing prompts, buttons, forms, status messages, errors, and export notes are in Chinese.
+## Screenshots
 
-## Features
+![Topspeed Builder home screen](./docs/screenshots/app-home.png)
 
-| Module | Capabilities |
-|--------|-------------|
-| **Project** | Create local directories, save `project.json`, manage recent projects |
-| **Generation** | OpenAI-compatible API, custom API, or local draft mode |
-| **Image-to-Image** | Upload reference images, reuse project assets, generate subject/style/composition/palette variants, and optionally use masks |
-| **Post-Processing** | Sharp-based transparent background, crop, uniform size, PNG |
-| **Batch** | Mass-generate icons / items / UI sprites from a name list |
-| **Animation** | Character pose frames → Sprite Sheet compositing |
-| **TileSet** | Base tiles, previews, metadata, Tiled `.tmx` export |
-| **Packing** | Texture Atlas synthesis, JSON metadata, ZIP bundle |
-| **History** | Generation log, prompt/parameter review, output tracking |
+| Project Settings | Generation Queue |
+|---|---|
+| ![Project settings screen](./docs/screenshots/project-config.png) | ![Generation queue screen](./docs/screenshots/generation-queue.png) |
+
+| Export Targets | Character Frame Example |
+|---|---|
+| ![Export screen](./docs/screenshots/export-targets.png) | ![Character frame sheet](./docs/screenshots/character-source-sheet.png) |
+
+## Capabilities
+
+| Area | What it does |
+|---|---|
+| Projects | Creates local project folders, writes `project.json`, manages recent projects |
+| Generation | Supports text-to-image, image-to-image, custom APIs, and local draft mode |
+| References | Imports subject/style/composition/palette references and optional masks |
+| Batch Assets | Generates icon, item, UI, character, enemy, background, effect, and tileset assets |
+| Sprite Sheets | Composes character frames into animation sheets with metadata |
+| TileSets | Builds tile PNGs, previews, JSON metadata, and Tiled maps |
+| Post-Processing | Uses Sharp for transparency, trimming, resizing, and PNG output |
+| Exports | Creates Unity, Godot, Tiled, Phaser, Cocos, common folders, and ZIP bundles |
 
 ## Quick Start
 
+Node.js 22 is recommended.
+
 ```bash
 npm install
-npm run dev       # dev mode
-npm run typecheck # type checking
-npm run build     # compile to out/
-npm run dist:win  # package Windows installer (output in release/)
-npm run dist:mac:arm64 # package Apple Silicon DMG/ZIP on macOS
-npm run dist:mac:x64   # package Intel Mac DMG/ZIP on macOS
-```
-
-One-click installer at `release/Topspeed Builder Setup 1.0.3.exe`.
-macOS test artifacts are written to `release/Topspeed Builder-1.0.3-mac-arm64.dmg` or `release/Topspeed Builder-1.0.3-mac-x64.dmg`.
-
-macOS packaging must run on macOS. The CI workflow at `.github/workflows/build-app.yml` builds Windows, macOS arm64, and macOS x64 test artifacts. Public macOS distribution requires Apple Developer ID signing and notarization; see [macOS Build and Release](./docs/mac-release.md).
-
-### macOS CLI Run
-
-If a macOS installer is not available yet, Mac users can run the app from source:
-
-```bash
-git clone https://github.com/voicepeak/topspeed-builder.git
-cd topspeed-builder
-git checkout macos
-npm ci
 npm run dev
+npm run typecheck
+npm run build
 ```
 
-Production preview is also available:
+Packaging:
 
 ```bash
-npm run build
-npm start
+npm run dist:win
+npm run dist:mac:arm64
+npm run dist:mac:x64
+npm run dist:linux
 ```
 
-Node.js 22 is recommended. If native dependency installation fails, install Xcode Command Line Tools with `xcode-select --install`.
-
-## AI API Configuration
-
-Configure in the Settings page:
-
-| Field | Example |
-|-------|---------|
-| `AI API Provider` | `openai` \| `custom` \| `local-draft` |
-| `API Key` | Your image generation service key |
-| `API Base URL` | OpenAI-compatible endpoint |
-| `Model` | e.g. `gpt-image-1.5` |
-
-Minimal request body:
-
-```json
-{
-  "model": "gpt-image-1.5",
-  "prompt": "prompt text",
-  "n": 1,
-  "size": "1024x1024"
-}
-```
-
-Transparency, cropping, and sizing are handled locally by Sharp.
-
-Image-to-image mode stores local reference copies in the project and sends multipart requests to OpenAI-compatible Images Edits endpoints. The OpenAI API supports multiple reference images, optional masks, and GPT Image models such as `gpt-image-1.5`, `gpt-image-1`, and `gpt-image-1-mini`.
-
-## Local Draft Mode
-
-Set `Provider` to `local-draft` for placeholder PNGs — no external API calls. Validate pipeline, compositing, and export flows offline.
-
-## Project Structure
-
-```
-project.json
-generated/
-  raw/
-  processed/
-sprites/
-icons/
-tilesets/
-sheets/
-atlas/
-exports/
-history/
-references/
-  images/
-  masks/
-  thumbnails/
-```
-
-## Export Targets
-
-| Target | Contents |
-|--------|----------|
-| **Unity** | PNG, Sprite Sheet, Atlas, JSON metadata, import notes |
-| **Godot** | PNG, Sprite Sheet, SpriteFrames guide, JSON metadata, import notes |
-| **Tiled** | TileSet PNG, TileSet JSON, TMX, import notes |
-| **Phaser / Cocos** | PNG, Sprite Sheet, Atlas, JSON frame data |
-| **Common** | Generic PNG + JSON |
-| **ZIP** | Complete export archive |
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Desktop Shell | Electron 33 |
-| Frontend | React 18, TypeScript, Lucide React |
-| i18n | i18next, react-i18next |
-| Build | Vite 5, electron-vite |
-| Image Processing | Sharp |
-| Archive | JSZip |
-| Storage | JSON files, project directory, Electron userData |
+Build artifacts are written to `release/`. macOS distribution requires Developer ID signing and notarization; see [docs/mac-release.md](./docs/mac-release.md).
 
 ## License
 
