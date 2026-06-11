@@ -115,15 +115,17 @@ jobs:
           path: release-artifacts
           merge-multiple: true
 
-      - name: List artifacts
-        run: ls -la release-artifacts/ || echo "no artifacts found"
+      - name: Delete existing release if any
+        run: gh release delete ${{ github.ref_name }} --yes --repo ${{ github.repository }} 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body: "详见 [CHANGELOG](./CHANGELOG.md)"
-          files: release-artifacts/**/*
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --repo ${{ github.repository }} \
+            --title ${{ github.ref_name }} \
+            --notes "详见 [CHANGELOG](./CHANGELOG.md)" \
+            release-artifacts/*
+        env:
+          GH_TOKEN: ${{ github.token }}
