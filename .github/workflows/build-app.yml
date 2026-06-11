@@ -120,12 +120,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Debug artifacts
+        run: find release-artifacts -type f | head -20
+
       - name: Create GitHub Release
         run: |
           gh release create ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --title ${{ github.ref_name }} \
             --notes "详见 [CHANGELOG](./CHANGELOG.md)" \
-            release-artifacts/*
+            release-artifacts/**/*
         env:
           GH_TOKEN: ${{ github.token }}
