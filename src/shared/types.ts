@@ -99,9 +99,11 @@ export interface RecentProject {
 }
 
 export type AIProvider = "openai" | "custom" | "local-draft";
+export type CustomApiFormat = "openai-image" | "openai-chat";
 
 export interface AppSettings {
   aiProvider: AIProvider;
+  customApiFormat: CustomApiFormat;
   apiKey: string;
   apiBaseUrl: string;
   model: string;

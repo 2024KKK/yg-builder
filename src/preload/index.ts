@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("topspeedBuilder", {
   removeRecentProject: (projectPath: string) => ipcRenderer.invoke("project:removeRecent", projectPath),
   getSettings: () => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke("settings:save", settings),
+  testConnection: (settings: AppSettings) => ipcRenderer.invoke("settings:testConnection", settings),
   chooseReferenceImages: (projectPath: string) => ipcRenderer.invoke("reference:chooseImages", projectPath),
   chooseMaskImage: (projectPath: string) => ipcRenderer.invoke("reference:chooseMask", projectPath),
   generateAssets: (input: GenerateAssetInput) => ipcRenderer.invoke("generate:assets", input),

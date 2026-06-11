@@ -138,10 +138,15 @@
   "settings.title": "设置",
   "settings.subtitle": "API Key、默认路径和生成参数保存在本机 userData 目录",
   "settings.aiProvider": "AI API Provider",
+  "settings.customApiFormat": "自定义 API 格式",
   "settings.model": "默认模型",
   "settings.quality": "生成质量",
   "settings.apiBaseUrl": "API Base URL",
   "settings.apiKey": "API Key",
+  "settings.testConnection": "检测连接",
+  "settings.testing": "检测中...",
+  "settings.testOk": "连接正常",
+  "settings.testFail": "连接失败",
   "settings.defaultProjectDir": "默认项目目录",
   "settings.defaultExportDir": "默认导出目录",
   "settings.defaultImageSize": "默认图像尺寸",
@@ -151,6 +156,9 @@
   "settings.autoTrim": "自动裁切",
   "settings.autoPackAtlas": "自动打包 Atlas",
   "settings.save": "保存设置",
+
+  "apiFormat.openai-image": "OpenAI 图片格式",
+  "apiFormat.openai-chat": "OpenAI Chat 格式",
 
   "targetPicker.label": "导出目标",
 
