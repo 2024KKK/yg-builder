@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/topspeed--builder-v1.0.3-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
+  <img src="https://img.shields.io/badge/topspeed--builder-v1.1.0-00d4ff?style=flat-square&labelColor=0b0e11" alt="版本">
   <img src="https://img.shields.io/badge/Electron-33.x-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron">
   <img src="https://img.shields.io/badge/React-18.x-58c4dc?style=flat-square&logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
@@ -63,7 +63,7 @@ Topspeed Builder 面向独立游戏开发者、美术原型师和小型游戏团
 1. 新建或打开一个本地素材项目。
 2. 配置游戏类型、美术风格、默认尺寸和导出目标。
 3. 选择素材类型，并填写名称、描述、参考图、动作帧或瓦片主题。
-4. 使用 `local-draft` 离线验证流程，或切换到 OpenAI 兼容接口执行真实生成。
+4. 使用 `local-draft` 离线验证流程，或切换到 OpenAI 兼容接口执行真实生成。使用中转站 API 时可在设置中选择 `OpenAI 图片格式` 或 `OpenAI Chat 格式` 来匹配不同后端协议。
 5. 在预览页检查素材包、精灵表、图集和元数据。
 6. 选择目标引擎并导出目录，可同时生成完整 ZIP 资源包。
 
@@ -89,14 +89,14 @@ npm start
 
 ```bash
 npm run dist:win       # Windows NSIS 安装包，输出到 release/
-npm run dist:mac:arm64 # Apple Silicon DMG/ZIP，需要 macOS
-npm run dist:mac:x64   # Intel Mac DMG/ZIP，需要 macOS
+npm run dist:mac:arm64 # Apple Silicon DMG/ZIP
+npm run dist:mac:x64   # Intel Mac DMG/ZIP
 npm run dist:linux     # AppImage / deb
 ```
 
-当前 Windows 安装包位于 `release/Topspeed Builder Setup 1.0.3.exe`。macOS 内测包位于 `release/Topspeed Builder-1.0.3-mac-arm64.dmg` 或 `release/Topspeed Builder-1.0.3-mac-x64.dmg`。
+预编译安装包请到 [GitHub Releases](https://github.com/voicepeak/topspeed-builder/releases) 下载对应平台的 `.exe` / `.dmg` / `.zip`。
 
-macOS 打包需要在 macOS 环境执行。CI 会通过 `.github/workflows/build-app.yml` 产出 Windows、macOS arm64 和 macOS x64 内测包；正式分发前需要 Apple Developer ID 签名和公证，流程见 [docs/mac-release.md](./docs/mac-release.md)。
+CI 通过 `.github/workflows/build-app.yml` 在 Push main 或打 `v*` 标签时自动构建 Windows、macOS arm64、macOS x64 三个平台的安装包，并创建 GitHub Release。正式分发前若需 Apple 签名与公证，流程见 [docs/mac-release.md](./docs/mac-release.md)。
 
 ### macOS 命令行运行
 
@@ -118,9 +118,12 @@ npm run dev
 | 配置项 | 说明 |
 |---|---|
 | 服务商 | `openai`、`custom` 或 `local-draft` |
+| API 格式 | 自定义接口时可选 `OpenAI 图片格式`（默认）或 `OpenAI Chat 格式`，匹配不同中转站后端 |
 | 接口密钥 | 图片生成服务的 API Key，仅保存在本机 |
 | 接口基础地址 | OpenAI 兼容图片生成或图片编辑接口地址 |
 | 模型 | 例如 `gpt-image-1.5`、`gpt-image-1`、`gpt-image-1-mini` |
+
+设置页提供 **检测连接** 按钮，可发送一条极小请求验证 DNS 解析、SSL 证书、API Key 鉴权和网络连通性，无需等待正式生成就能确认配置是否正常。
 
 OpenAI 兼容文本生成最小请求体：
 
@@ -130,6 +133,19 @@ OpenAI 兼容文本生成最小请求体：
   "prompt": "提示词文本",
   "n": 1,
   "size": "1024x1024"
+}
+```
+
+Chat 格式请求体（选择 `OpenAI Chat 格式` 时发送）：
+
+```json
+{
+  "model": "gpt-image-1.5",
+  "messages": [
+    { "role": "system", "content": "You are an image generation AI..." },
+    { "role": "user", "content": "提示词文本" }
+  ],
+  "max_tokens": 4096
 }
 ```
 
@@ -234,7 +250,7 @@ Project files, history, reference images, and API keys stay on the local machine
 1. Create or open a local asset project.
 2. Configure game type, art style, default size, and export targets.
 3. Choose an asset type, then fill in name, description, references, animation frames, or tileset theme.
-4. Use `local-draft` to validate the pipeline offline, or switch to an OpenAI-compatible API for real generation.
+4. Use `local-draft` to validate the pipeline offline, or switch to an OpenAI-compatible API for real generation. When using a relay/aggregator API, select between `OpenAI Image Format` and `OpenAI Chat Format` in Settings to match the backend protocol.
 5. Review generated assets, sprite sheets, atlases, and metadata in the preview page.
 6. Export engine-specific folders and optionally create a complete ZIP package.
 
@@ -265,7 +281,9 @@ npm run dist:mac:x64
 npm run dist:linux
 ```
 
-Build artifacts are written to `release/`. macOS distribution requires Developer ID signing and notarization; see [docs/mac-release.md](./docs/mac-release.md).
+Prebuilt installers are available on [GitHub Releases](https://github.com/voicepeak/topspeed-builder/releases) for each platform (`.exe` / `.dmg` / `.zip`).
+
+CI automatically builds Windows, macOS arm64, and macOS x64 installers on pushes to `main` or `v*` tags via `.github/workflows/build-app.yml`, and creates a GitHub Release with all packages attached. For Apple signing and notarization, see [docs/mac-release.md](./docs/mac-release.md).
 
 ### macOS CLI Run
 
@@ -287,9 +305,12 @@ Configure the image generation service in Settings:
 | Field | Description |
 |---|---|
 | Provider | `openai`, `custom`, or `local-draft` |
+| API Format | For `custom` provider: choose `OpenAI Image Format` (default) or `OpenAI Chat Format` to match the backend |
 | API Key | Image generation service API key, stored locally |
 | API Base URL | OpenAI-compatible image generation or image edits endpoint |
 | Model | For example `gpt-image-1.5`, `gpt-image-1`, or `gpt-image-1-mini` |
+
+The Settings page includes a **Test Connection** button that sends a minimal request to verify DNS resolution, SSL, authentication, and network connectivity before committing to a full generation.
 
 Minimal OpenAI-compatible text-to-image request body:
 
@@ -299,6 +320,19 @@ Minimal OpenAI-compatible text-to-image request body:
   "prompt": "prompt text",
   "n": 1,
   "size": "1024x1024"
+}
+```
+
+Chat format request body (sent when `OpenAI Chat Format` is selected):
+
+```json
+{
+  "model": "gpt-image-1.5",
+  "messages": [
+    { "role": "system", "content": "You are an image generation AI..." },
+    { "role": "user", "content": "prompt text" }
+  ],
+  "max_tokens": 4096
 }
 ```
 
