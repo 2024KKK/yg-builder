@@ -115,20 +115,26 @@ jobs:
           path: release-artifacts
           merge-multiple: true
 
-      - name: Delete existing release if any
-        run: gh release delete ${{ github.ref_name }} --yes --repo ${{ github.repository }} 2>/dev/null || true
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Debug artifacts
-        run: find release-artifacts -type f | head -20
+      - name: Verify artifacts
+        run: |
+          echo "===== Downloaded artifacts ====="
+          find release-artifacts -type f -name "*.exe" -o -name "*.dmg" -o -name "*.zip" | sort
+          echo "Total files: $(find release-artifacts -type f | wc -l)"
 
       - name: Create GitHub Release
-        run: |
-          gh release create ${{ github.ref_name }} \
-            --repo ${{ github.repository }} \
-            --title ${{ github.ref_name }} \
-            --notes "详见 [CHANGELOG](./CHANGELOG.md)" \
-            release-artifacts/**/*
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "${{ github.ref_name }}" --yes --repo "${{ github.repository }}" 2>/dev/null || true
+          readarray -t FILES < <(find release-artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.zip" \))
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No installer files found!";
+            find release-artifacts -type f;
+            exit 1;
+          fi
+          printf 'Attaching: %s\n' "${FILES[@]}"
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "详见 [CHANGELOG](./CHANGELOG.md)" \
+            "${FILES[@]}"
