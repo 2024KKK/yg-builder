@@ -12,7 +12,10 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
+      - "docs/icon.ico"
+      - "docs/icon.icns"
       - "docs/icon.png"
+      - "scripts/generate-icon.mjs"
       - "src/**"
   pull_request:
     paths:
@@ -21,7 +24,10 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
+      - "docs/icon.ico"
+      - "docs/icon.icns"
       - "docs/icon.png"
+      - "scripts/generate-icon.mjs"
       - "src/**"
   workflow_dispatch:
 
@@ -38,15 +44,15 @@ jobs:
         include:
           - name: Windows x64
             os: windows-2025
-            command: npm run dist:win
+            script: dist:win
             artifact: topspeed-builder-windows-x64
           - name: macOS arm64
             os: macos-15
-            command: npm run dist:mac:arm64
+            script: dist:mac:arm64
             artifact: topspeed-builder-macos-arm64
           - name: macOS Intel
             os: macos-15-intel
-            command: npm run dist:mac:x64
+            script: dist:mac:x64
             artifact: topspeed-builder-macos-x64
 
     steps:
@@ -63,7 +69,18 @@ jobs:
         run: npm ci
 
       - name: Package app
-        run: ${{ matrix.command }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ci-logs | Out-Null
+          $logPath = "ci-logs/package-${{ matrix.artifact }}.log"
+          npm run ${{ matrix.script }} 2>&1 | Tee-Object -FilePath $logPath
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            $tail = (Get-Content $logPath -Tail 80) -join "`n"
+            $escaped = $tail.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+            Write-Host "::error title=Package app failed::$escaped"
+            exit $exitCode
+          }
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -74,6 +91,15 @@ jobs:
           path: release/**/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload package logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-logs
+          path: ci-logs/**/*
+          if-no-files-found: ignore
+          retention-days: 7
 
   release:
     name: Create Release

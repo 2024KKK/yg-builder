@@ -1534,7 +1534,7 @@ function SettingsPage(props: {
           </button>
           {testResult && (
             <span style={{ padding: "6px 0", fontSize: 13, color: testResult.ok ? "#4ade80" : "#f87171", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {testResult.ok ? t("settings.testOk") : `${t("settings.testFail")}: ${testResult.detail}`}
+              {testResult.ok ? `${t("settings.testOk")} · ${testResult.detail}` : `${t("settings.testFail")}: ${testResult.detail}`}
             </span>
           )}
         </div>

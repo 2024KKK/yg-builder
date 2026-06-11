@@ -49,6 +49,12 @@ export class AIGenerationService {
     }
 
     const baseUrl = settings.apiBaseUrl.trim();
+    try {
+      this.assertHttpEndpoint(baseUrl, "自定义接口基础地址");
+    } catch (err) {
+      return { ok: false, status: 0, detail: err instanceof Error ? err.message : String(err) };
+    }
+
     let testUrl: string;
     let testBody: string | undefined;
     const format = settings.customApiFormat || "openai-image";
@@ -71,7 +77,7 @@ export class AIGenerationService {
       testBody = JSON.stringify({
         model: settings.model || "dall-e-2",
         prompt: "test",
-        n: 1,
+        n: 0,
         size: "256x256"
       });
     }
@@ -91,12 +97,16 @@ export class AIGenerationService {
         return { ok: true, status: response.status, detail };
       }
 
+      if (format === "openai-image" && response.status === 400) {
+        return { ok: true, status: response.status, detail: `接口连通，鉴权通过（服务端以 HTTP 400 拒绝了测试参数，无实际图片生成）` };
+      }
+
       if (response.status === 401 || response.status === 403) {
-        return { ok: false, status: response.status, detail: `鉴权失败(${response.status})：请检查 API Key 是否正确。` + detail };
+        return { ok: false, status: response.status, detail: `鉴权失败(${response.status})：请检查 API Key 是否正确。${this.summarizeBody(responseText)}` };
       }
 
       if (response.status === 404) {
-        return { ok: false, status: response.status, detail: `接口地址未找到(404)：请检查 API Base URL 路径是否正确。` + detail };
+        return { ok: false, status: response.status, detail: `接口地址未找到(404)：请检查 API Base URL 路径是否正确。${this.summarizeBody(responseText)}` };
       }
 
       return { ok: false, status: response.status, detail };
@@ -305,8 +315,14 @@ export class AIGenerationService {
   private async generateWithCustomChatFormat(
     args: GenerateImageArgs,
     endpoint: string,
-    _useReference: boolean
+    useReference: boolean
   ): Promise<Buffer> {
+    if (useReference) {
+      throw new Error(
+        "Chat 格式自定义接口暂不支持参考图/蒙版。请在设置页将 API 格式切换为 openai-image，或移除参考图后重试。"
+      );
+    }
+
     const payload = {
       model: args.settings.model,
       messages: [
@@ -339,10 +355,10 @@ export class AIGenerationService {
       );
     }
 
-    return this.extractImageFromChatPayload(responseText, endpoint);
+    return await this.extractImageFromChatPayload(responseText, endpoint);
   }
 
-  private extractImageFromChatPayload(responseText: string, endpoint: string): Buffer {
+  private async extractImageFromChatPayload(responseText: string, endpoint: string): Promise<Buffer> {
     let payload: any;
     try {
       payload = JSON.parse(responseText);
@@ -356,7 +372,7 @@ export class AIGenerationService {
 
     const imageData = payload.data?.[0];
     if (imageData?.url || imageData?.b64_json) {
-      const b64 = imageData.b64_json ?? imageData.image;
+      const b64 = imageData.b64_json;
       const url = imageData.url ?? payload.url;
 
       if (b64) {
@@ -364,14 +380,15 @@ export class AIGenerationService {
       }
 
       if (url) {
-        return this.downloadImageFromUrl(url, endpoint);
+        this.assertHttpEndpoint(url, "Chat 响应 data[0].url");
+        return await this.downloadImageFromUrl(url, endpoint);
       }
     }
 
     const choice = payload.choices?.[0];
     if (choice) {
       const content = choice.message?.content ?? choice.text ?? "";
-      return this.extractImageFromChatContent(content, endpoint);
+      return await this.extractImageFromChatContent(content, endpoint);
     }
 
     console.error("[Topspeed Builder] 自定义接口 (chat) 无法解析响应:", responseText.slice(0, 500));
@@ -381,7 +398,7 @@ export class AIGenerationService {
     );
   }
 
-  private extractImageFromChatContent(content: string, endpoint: string): Buffer {
+  private async extractImageFromChatContent(content: string, endpoint: string): Promise<Buffer> {
     const b64Match = content.match(/["']?data:image\/\w+;base64,([A-Za-z0-9+/=]+)["']?/);
     if (b64Match) {
       return Buffer.from(b64Match[1], "base64");
@@ -389,7 +406,8 @@ export class AIGenerationService {
 
     const urlMatch = content.match(/https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|webp|gif)[^\s"'<>]*/i);
     if (urlMatch) {
-      return this.downloadImageFromUrl(urlMatch[0], endpoint);
+      this.assertHttpEndpoint(urlMatch[0], "Chat 响应中提取的图片 URL");
+      return await this.downloadImageFromUrl(urlMatch[0], endpoint);
     }
 
     const genericB64 = content.match(/"([A-Za-z0-9+/=]{100,})"/);
@@ -406,16 +424,12 @@ export class AIGenerationService {
     );
   }
 
-  private downloadImageFromUrl(url: string, endpoint: string): Buffer {
-    const imageResponse = fetch(url, { signal: AbortSignal.timeout(30000) });
-    return imageResponse
-      .then((resp) => {
-        if (!resp.ok) {
-          throw new Error(`下载图片失败: HTTP ${resp.status} ${resp.statusText}, URL: ${url}`);
-        }
-        return resp.arrayBuffer();
-      })
-      .then((buf) => Buffer.from(buf)) as unknown as Buffer;
+  private async downloadImageFromUrl(url: string, endpoint: string): Promise<Buffer> {
+    const imageResponse = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    if (!imageResponse.ok) {
+      throw new Error(`下载图片失败: HTTP ${imageResponse.status} ${imageResponse.statusText}, URL: ${url}`);
+    }
+    return Buffer.from(await imageResponse.arrayBuffer());
   }
 
   private resolveOpenAIImageEndpoint(input: string, mode: "generations" | "edits"): string {
