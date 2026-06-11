@@ -27,6 +27,7 @@ declare global {
       removeRecentProject(projectPath: string): Promise<IpcResponse<RecentProject[]>>;
       getSettings(): Promise<IpcResponse<AppSettings>>;
       saveSettings(settings: AppSettings): Promise<IpcResponse<AppSettings>>;
+      testConnection(settings: AppSettings): Promise<IpcResponse<{ ok: boolean; status: number; detail: string }>>;
       chooseReferenceImages(projectPath: string): Promise<IpcResponse<ImportedReferenceImage[]>>;
       chooseMaskImage(projectPath: string): Promise<IpcResponse<ImportedReferenceImage>>;
       generateAssets(input: GenerateAssetInput): Promise<IpcResponse<GeneratedAssetResult>>;

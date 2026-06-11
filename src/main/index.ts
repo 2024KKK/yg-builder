@@ -77,6 +77,7 @@ function registerIpc(): void {
 
   handle("settings:get", () => settingsService.getSettings());
   handle("settings:save", (settings: AppSettings) => settingsService.saveSettings(settings));
+  handle("settings:testConnection", (settings: AppSettings) => aiService.testConnection(settings));
 
   handle("project:deleteAsset", (projectPath: string, assetId: string) => projectService.deleteAsset(projectPath, assetId));
   handle("reference:chooseImages", (projectPath: string) => referenceService.chooseReferenceImages(projectPath));

@@ -30,6 +30,7 @@ export class SettingsService {
 
     return {
       aiProvider: "openai",
+      customApiFormat: "openai-image",
       apiKey: "",
       apiBaseUrl: "https://api.openai.com/v1/images/generations",
       model: "gpt-image-1.5",
@@ -66,6 +67,7 @@ export class SettingsService {
     const output: Partial<AppSettings> = {};
 
     this.readLooseString(raw, output, "aiProvider");
+    this.readLooseString(raw, output, "customApiFormat");
     this.readLooseString(raw, output, "apiKey");
     this.readLooseString(raw, output, "apiBaseUrl");
     this.readLooseString(raw, output, "model");

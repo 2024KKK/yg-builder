@@ -138,10 +138,15 @@
   "settings.title": "Settings",
   "settings.subtitle": "API Key, default paths and generation parameters saved in local userData",
   "settings.aiProvider": "AI API Provider",
+  "settings.customApiFormat": "Custom API Format",
   "settings.model": "Default Model",
   "settings.quality": "Generation Quality",
   "settings.apiBaseUrl": "API Base URL",
   "settings.apiKey": "API Key",
+  "settings.testConnection": "Test Connection",
+  "settings.testing": "Testing...",
+  "settings.testOk": "Connected",
+  "settings.testFail": "Connection Failed",
   "settings.defaultProjectDir": "Default Project Directory",
   "settings.defaultExportDir": "Default Export Directory",
   "settings.defaultImageSize": "Default Image Size",
@@ -151,6 +156,9 @@
   "settings.autoTrim": "Auto Trim",
   "settings.autoPackAtlas": "Auto Pack Atlas",
   "settings.save": "Save Settings",
+
+  "apiFormat.openai-image": "OpenAI Image Format",
+  "apiFormat.openai-chat": "OpenAI Chat Format",
 
   "targetPicker.label": "Export Targets",
 

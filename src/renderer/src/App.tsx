@@ -97,6 +97,10 @@ const providerOptions: SelectOption[] = [
   { value: "custom", label: "provider.custom" },
   { value: "local-draft", label: "provider.local-draft" }
 ];
+const apiFormatOptions: SelectOption[] = [
+  { value: "openai-image", label: "apiFormat.openai-image" },
+  { value: "openai-chat", label: "apiFormat.openai-chat" }
+];
 const qualityOptions: SelectOption[] = [
   { value: "low", label: "quality.low" },
   { value: "medium", label: "quality.medium" },
@@ -188,6 +192,7 @@ const defaultAnimations: AnimationConfig[] = [
 
 const defaultSettings: AppSettings = {
   aiProvider: "openai",
+  customApiFormat: "openai-image",
   apiKey: "",
   apiBaseUrl: "https://api.openai.com/v1/images/generations",
   model: "gpt-image-1.5",
@@ -1468,7 +1473,27 @@ function SettingsPage(props: {
 }): JSX.Element {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<AppSettings>(props.settings);
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [testing, setTesting] = useState(false);
   useEffect(() => setDraft(props.settings), [props.settings]);
+
+  const runTest = async () => {
+    if (!window.topspeedBuilder) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await window.topspeedBuilder.testConnection(draft);
+      if (res.ok && res.data) {
+        setTestResult({ ok: res.data.ok, detail: res.data.detail });
+      } else {
+        setTestResult({ ok: false, detail: res.error ?? "检测请求失败" });
+      }
+    } catch (e) {
+      setTestResult({ ok: false, detail: String(e) });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   return (
     <section className="panel wide">
@@ -1480,6 +1505,14 @@ function SettingsPage(props: {
           options={providerOptions}
           onChange={(aiProvider) => setDraft({ ...draft, aiProvider: aiProvider as AppSettings["aiProvider"] })}
         />
+        {draft.aiProvider === "custom" && (
+          <SelectInput
+            label={t("settings.customApiFormat")}
+            value={draft.customApiFormat}
+            options={apiFormatOptions}
+            onChange={(customApiFormat) => setDraft({ ...draft, customApiFormat: customApiFormat as AppSettings["customApiFormat"] })}
+          />
+        )}
         <TextInput label={t("settings.model")} value={draft.model} onChange={(model) => setDraft({ ...draft, model })} />
         <SelectInput
           label={t("settings.quality")}
@@ -1489,6 +1522,22 @@ function SettingsPage(props: {
         />
         <TextInput label={t("settings.apiBaseUrl")} value={draft.apiBaseUrl} onChange={(apiBaseUrl) => setDraft({ ...draft, apiBaseUrl })} />
         <TextInput label={t("settings.apiKey")} value={draft.apiKey} type="password" onChange={(apiKey) => setDraft({ ...draft, apiKey })} />
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+          <button
+            className="primaryButton"
+            style={{ marginBottom: 0, whiteSpace: "nowrap" }}
+            disabled={testing || draft.aiProvider === "local-draft"}
+            onClick={runTest}
+          >
+            {testing ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
+            <span>{testing ? t("settings.testing") : t("settings.testConnection")}</span>
+          </button>
+          {testResult && (
+            <span style={{ padding: "6px 0", fontSize: 13, color: testResult.ok ? "#4ade80" : "#f87171", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {testResult.ok ? `${t("settings.testOk")} · ${testResult.detail}` : `${t("settings.testFail")}: ${testResult.detail}`}
+            </span>
+          )}
+        </div>
         <TextInput label={t("settings.defaultProjectDir")} value={draft.defaultProjectRoot} onChange={(defaultProjectRoot) => setDraft({ ...draft, defaultProjectRoot })} />
         <TextInput label={t("settings.defaultExportDir")} value={draft.defaultExportDirectory} onChange={(defaultExportDirectory) => setDraft({ ...draft, defaultExportDirectory })} />
         <TextInput label={t("settings.defaultImageSize")} value={draft.defaultImageSize} onChange={(defaultImageSize) => setDraft({ ...draft, defaultImageSize })} />
