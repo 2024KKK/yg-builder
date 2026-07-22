@@ -616,6 +616,12 @@ button { color: inherit; }
   cursor: not-allowed;
 }
 
+.fieldHint {
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* === BUTTON SYSTEM === */
 .nav button,
 .ghostButton,
@@ -1418,7 +1424,7 @@ button { color: inherit; }
 
 .animationHeader {
   display: grid;
-  grid-template-columns: 1fr 72px 72px 80px;
+  grid-template-columns: minmax(0, 1fr) 72px 72px 80px 42px;
   gap: 8px;
   align-items: end;
   color: var(--dim);
@@ -1430,7 +1436,7 @@ button { color: inherit; }
 
 .animationRow {
   display: grid;
-  grid-template-columns: 1fr 72px 72px 80px;
+  grid-template-columns: minmax(0, 1fr) 72px 72px 80px 42px;
   gap: 8px;
 }
 
@@ -1457,6 +1463,18 @@ button { color: inherit; }
   min-height: 38px;
   padding: 0 10px;
   font-size: 12px;
+}
+
+.animationRow .animationDeleteButton {
+  padding: 0;
+  color: #fca5a5;
+}
+
+.animationRow .animationDeleteButton:hover {
+  border-color: #f87171;
+  color: #fecaca;
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.15), transparent);
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.18);
 }
 
 .emptyState {

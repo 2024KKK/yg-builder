@@ -73,7 +73,7 @@ export class AIGenerationService {
         max_tokens: 1
       });
     } else {
-      testUrl = baseUrl;
+      testUrl = this.resolveOpenAIImageEndpoint(baseUrl, "generations");
       testBody = JSON.stringify({
         model: settings.model || "dall-e-2",
         prompt: "test",
@@ -238,15 +238,16 @@ export class AIGenerationService {
       throw new Error("自定义接口地址为空。请在设置页配置接口基础地址。");
     }
 
-    const endpoint = args.settings.apiBaseUrl.trim();
-    this.assertHttpEndpoint(endpoint, "自定义接口基础地址");
+    const baseUrl = args.settings.apiBaseUrl.trim();
+    this.assertHttpEndpoint(baseUrl, "自定义接口基础地址");
     const format = args.settings.customApiFormat || "openai-image";
     const useReference = (args.referenceImages?.length ?? 0) > 0 || Boolean(args.maskImagePath);
 
     if (format === "openai-chat") {
-      return this.generateWithCustomChatFormat(args, endpoint, useReference);
+      return this.generateWithCustomChatFormat(args, baseUrl, useReference);
     }
 
+    const endpoint = this.resolveOpenAIImageEndpoint(baseUrl, useReference ? "edits" : "generations");
     return this.generateWithCustomImageFormat(args, endpoint, useReference);
   }
 
@@ -433,7 +434,7 @@ export class AIGenerationService {
   }
 
   private resolveOpenAIImageEndpoint(input: string, mode: "generations" | "edits"): string {
-    const fallback = "https://api.openai.com/v1/images/generations";
+    const fallback = "https://api.openai.com";
     const raw = input.trim() || fallback;
     const url = new URL(raw);
     const path = url.pathname.replace(/\/+$/g, "");
@@ -443,7 +444,7 @@ export class AIGenerationService {
       return url.toString();
     }
 
-    if (path === "/v1") {
+    if (path.endsWith("/v1")) {
       url.pathname = `${path}/images/${mode}`;
       return url.toString();
     }
@@ -453,6 +454,7 @@ export class AIGenerationService {
       return url.toString();
     }
 
+    url.pathname = `${path}/v1/images/${mode}`;
     return url.toString();
   }
 

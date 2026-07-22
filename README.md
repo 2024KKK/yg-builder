@@ -118,7 +118,7 @@ npm run dev
 | 配置项 | 说明 |
 |---|---|
 | 服务商 | `openai`、`custom` 或 `local-draft` |
-| API 格式 | 自定义接口时可选 `OpenAI 图片格式`（默认）或 `OpenAI Chat 格式`，匹配不同中转站后端 |
+| API 格式 | 自定义接口时可选 `OpenAI 图片格式`（默认）或 `OpenAI Chat 格式`；图片格式只需填写基础 API 域名，文本生成会自动使用 `/v1/images/generations`，参考图生成会自动使用 `/v1/images/edits` |
 | 接口密钥 | 图片生成服务的 API Key，仅保存在本机 |
 | 接口基础地址 | OpenAI 兼容图片生成或图片编辑接口地址 |
 | 模型 | 例如 `gpt-image-1.5`、`gpt-image-1`、`gpt-image-1-mini` |
@@ -307,7 +307,7 @@ Configure the image generation service in Settings:
 | Provider | `openai`, `custom`, or `local-draft` |
 | API Format | For `custom` provider: choose `OpenAI Image Format` (default) or `OpenAI Chat Format` to match the backend |
 | API Key | Image generation service API key, stored locally |
-| API Base URL | OpenAI-compatible image generation or image edits endpoint |
+| API Base URL | Base API domain; OpenAI Image Format automatically appends `/v1/images/generations` or `/v1/images/edits` |
 | Model | For example `gpt-image-1.5`, `gpt-image-1`, or `gpt-image-1-mini` |
 
 The Settings page includes a **Test Connection** button that sends a minimal request to verify DNS resolution, SSL, authentication, and network connectivity before committing to a full generation.

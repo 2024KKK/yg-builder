@@ -194,7 +194,7 @@ const defaultSettings: AppSettings = {
   aiProvider: "openai",
   customApiFormat: "openai-image",
   apiKey: "",
-  apiBaseUrl: "https://api.openai.com/v1/images/generations",
+  apiBaseUrl: "https://api.openai.com",
   model: "gpt-image-1.5",
   defaultProjectRoot: "",
   defaultExportDirectory: "",
@@ -1520,7 +1520,12 @@ function SettingsPage(props: {
           options={qualityOptions}
           onChange={(generationQuality) => setDraft({ ...draft, generationQuality: generationQuality as AppSettings["generationQuality"] })}
         />
-        <TextInput label={t("settings.apiBaseUrl")} value={draft.apiBaseUrl} onChange={(apiBaseUrl) => setDraft({ ...draft, apiBaseUrl })} />
+        <TextInput
+          label={t("settings.apiBaseUrl")}
+          value={draft.apiBaseUrl}
+          hint={draft.aiProvider === "custom" && draft.customApiFormat === "openai-image" ? t("settings.apiBaseUrlImageHint") : undefined}
+          onChange={(apiBaseUrl) => setDraft({ ...draft, apiBaseUrl })}
+        />
         <TextInput label={t("settings.apiKey")} value={draft.apiKey} type="password" onChange={(apiKey) => setDraft({ ...draft, apiKey })} />
         <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
           <button
@@ -1670,6 +1675,10 @@ function AnimationEditor(props: { value: AnimationConfig[]; onChange: (value: An
     props.onChange(props.value.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
   }
 
+  function remove(index: number): void {
+    props.onChange(props.value.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   return (
     <div className="animationEditor">
       <label>{t("generate.animFrames")}</label>
@@ -1679,9 +1688,10 @@ function AnimationEditor(props: { value: AnimationConfig[]; onChange: (value: An
         <span>{t("generate.animFrameCount")}</span>
         <span>{t("generate.animFps")}</span>
         <span>{t("generate.animLoop")}</span>
+        <span>{t("generate.animActions")}</span>
       </div>
       {props.value.map((animation, index) => (
-        <div key={`${animation.name}-${index}`} className="animationRow">
+        <div key={index} className="animationRow">
           <input
             aria-label={t("generate.animName")}
             title={t("generate.animName")}
@@ -1708,6 +1718,15 @@ function AnimationEditor(props: { value: AnimationConfig[]; onChange: (value: An
           />
           <button type="button" title={t("generate.animLoopHint")} onClick={() => update(index, { loop: !animation.loop })}>
             {animation.loop ? t("generate.loop") : t("generate.once")}
+          </button>
+          <button
+            className="animationDeleteButton"
+            type="button"
+            title={t("generate.removeAnimHint", { name: animation.name || t("generate.animName") })}
+            aria-label={t("generate.removeAnimHint", { name: animation.name || t("generate.animName") })}
+            onClick={() => remove(index)}
+          >
+            <Trash2 size={15} />
           </button>
         </div>
       ))}
@@ -1743,6 +1762,7 @@ function TextInput(props: {
   value: string;
   type?: string;
   disabled?: boolean;
+  hint?: string;
   onChange: (value: string) => void;
 }): JSX.Element {
   return (
@@ -1754,6 +1774,7 @@ function TextInput(props: {
         disabled={props.disabled}
         onChange={(event) => props.onChange(event.target.value)}
       />
+      {props.hint && <small className="fieldHint">{props.hint}</small>}
     </label>
   );
 }
